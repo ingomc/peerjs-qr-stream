@@ -218,6 +218,42 @@ export function initStreamerApp() {
         debugLog(`📞 Rufe Viewer an: ${viewerId}`);
         const call = peer.call(viewerId, localStream);
         
+        // 💬 DATA CHANNEL für Text-Nachrichten einrichten
+        let dataChannel = null;
+        
+        if (call.peerConnection) {
+          debugLog('📨 Erstelle DataChannel für Text-Nachrichten...');
+          dataChannel = call.peerConnection.createDataChannel('messages', {
+            ordered: true
+          });
+          
+          dataChannel.addEventListener('open', () => {
+            debugLog('✅ DataChannel ist geöffnet - kann Nachrichten senden!');
+            // Test-Nachricht an Viewer senden
+            dataChannel.send('📱 Hallo vom Handy! DataChannel Test 🚀');
+            
+            // Weitere Test-Nachrichten
+            setTimeout(() => dataChannel.send('📱 5 Sekunden Test-Nachricht'), 5000);
+            setTimeout(() => dataChannel.send('📱 10 Sekunden - funktioniert DataChannel?'), 10000);
+          });
+          
+          dataChannel.addEventListener('message', (event) => {
+            debugLog(`💬 Antwort vom Viewer: "${event.data}"`);
+            // Weitere Antworten senden
+            if (dataChannel.readyState === 'open') {
+              dataChannel.send(`📱 Handy bestätigt: DataChannel funktioniert! 👍`);
+            }
+          });
+          
+          dataChannel.addEventListener('error', (error) => {
+            debugLog(`❌ DataChannel Fehler: ${error}`, 'error');
+          });
+          
+          dataChannel.addEventListener('close', () => {
+            debugLog('📪 DataChannel geschlossen');
+          });
+        }
+        
         call.on('stream', remoteStream => {
           debugLog('📺 Remote-Stream empfangen (ungewöhnlich für Streamer)', 'info');
         });

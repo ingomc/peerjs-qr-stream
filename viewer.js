@@ -158,6 +158,39 @@ export function initViewerApp() {
       debugLog('📞 Eingehender Anruf vom Handy erhalten');
       debugLog('📋 Call Details: ' + JSON.stringify({peer: call?.peer, type: call?.type}));
       
+      // 💬 DATA CHANNEL für Text-Nachrichten einrichten
+      let dataChannel = null;
+      
+      if (call.peerConnection) {
+        // Empfänger-Seite: warte auf DataChannel vom Sender
+        call.peerConnection.addEventListener('datachannel', (event) => {
+          dataChannel = event.channel;
+          debugLog('📨 DataChannel empfangen vom Handy!');
+          
+          dataChannel.addEventListener('open', () => {
+            debugLog('✅ DataChannel ist geöffnet - kann Nachrichten senden!');
+            // Test-Nachricht an Handy senden
+            dataChannel.send('🖥️ Hallo vom Viewer! DataChannel funktioniert! 👋');
+          });
+          
+          dataChannel.addEventListener('message', (event) => {
+            debugLog(`💬 Nachricht vom Handy: "${event.data}"`);
+            // Antwort zurücksenden
+            if (dataChannel.readyState === 'open') {
+              dataChannel.send(`🖥️ Viewer hat empfangen: "${event.data}"`);
+            }
+          });
+          
+          dataChannel.addEventListener('error', (error) => {
+            debugLog(`❌ DataChannel Fehler: ${error}`, 'error');
+          });
+          
+          dataChannel.addEventListener('close', () => {
+            debugLog('📪 DataChannel geschlossen');
+          });
+        });
+      }
+      
       // Debug: Warum wird Verbindung nicht angenommen?
       if (!call) {
         debugLog('❌ FEHLER: Call-Objekt ist null/undefined!', 'error');
@@ -175,6 +208,11 @@ export function initViewerApp() {
       setTimeout(async () => {
         if (call.peerConnection) {
           debugLog('🔧 PeerConnection verfügbar - konfiguriere Monitoring');
+          
+          // SOFORTIGE State-Abfrage
+          debugLog(`🔍 Initial ICE Connection State: ${call.peerConnection.iceConnectionState}`);
+          debugLog(`🔍 Initial Connection State: ${call.peerConnection.connectionState}`);
+          debugLog(`🔍 Initial Signaling State: ${call.peerConnection.signalingState}`);
           
           // Codec-Präferenzen auch auf Empfänger-Seite setzen
           const transceivers = call.peerConnection.getTransceivers();
@@ -195,6 +233,12 @@ export function initViewerApp() {
               debugLog('🧊 ICE Gathering abgeschlossen');
               debugLog(`🔍 ICE Connection State nach Gathering: ${call.peerConnection.iceConnectionState}`);
               debugLog(`🔍 Connection State nach Gathering: ${call.peerConnection.connectionState}`);
+              
+              // FORCE einen State-Check nach ICE Gathering
+              setTimeout(() => {
+                debugLog(`🔍 5s nach ICE Gathering - ICE State: ${call.peerConnection.iceConnectionState}`);
+                debugLog(`🔍 5s nach ICE Gathering - Conn State: ${call.peerConnection.connectionState}`);
+              }, 5000);
             }
           });
           
@@ -250,17 +294,16 @@ export function initViewerApp() {
         // Stream-Details loggen
         stream.getVideoTracks().forEach((track, i) => {
           const settings = track.getSettings();
-          const constraints = track.getConstraints();
           debugLog(`📹 Video Track ${i}: ${settings.width || 'auto'}x${settings.height || 'auto'}@${settings.frameRate || 'auto'}fps`);
           debugLog(`📹 Video Track ${i} State: ${track.readyState}`);
-          debugLog(`📹 Video Track ${i} Settings:`, settings);
+          debugLog(`📹 Video Track ${i} Settings: ${JSON.stringify(settings)}`);
         });
         
         stream.getAudioTracks().forEach((track, i) => {
           const settings = track.getSettings();
           debugLog(`🔊 Audio Track ${i}: ${settings.sampleRate || 'auto'}Hz, ${settings.channelCount || 'auto'} channels`);
           debugLog(`🔊 Audio Track ${i} State: ${track.readyState}`);
-          debugLog(`🔊 Audio Track ${i} Settings:`, settings);
+          debugLog(`🔊 Audio Track ${i} Settings: ${JSON.stringify(settings)}`);
         });
         
         remoteVideo.srcObject = stream;
