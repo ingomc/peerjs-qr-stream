@@ -61,20 +61,17 @@ export function initViewerApp() {
   }
 
   function createPeer() {
-    // INTERNET-OPTIMIERTE KONFIGURATION mit TURN-Server forciert
+    // AGGRESSIVERE INTERNET-KONFIGURATION mit zuverlässigen TURN-Servern
     const peer = new Peer({
       config: {
         'iceServers': [
-          // Google's öffentliche STUN Server
+          // Google's STUN Server (für lokale IP-Erkennung)
           { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' },
-          // Alternative STUN Server
-          { urls: 'stun:stun.relay.metered.ca:80' },
-          // Robuste TURN Server Konfiguration für Internet
+          
+          // ZUVERLÄSSIGE TURN-Server mit verschiedenen Protokollen
           {
             urls: [
-              'turn:openrelay.metered.ca:80', 
+              'turn:openrelay.metered.ca:80',
               'turn:openrelay.metered.ca:443',
               'turn:openrelay.metered.ca:80?transport=tcp',
               'turn:openrelay.metered.ca:443?transport=tcp'
@@ -82,7 +79,8 @@ export function initViewerApp() {
             username: 'openrelayproject',
             credential: 'openrelayproject'
           },
-          // Zusätzliche kostenlose TURN Server
+          
+          // Backup TURN-Server (Express Turn)
           {
             urls: [
               'turn:relay1.expressturn.com:3478',
@@ -91,7 +89,8 @@ export function initViewerApp() {
             username: 'efSCKZqnZbF2RfHZ68',
             credential: 'web@anyfirewall.com'
           },
-          // Weitere TURN Server für maximale Internet-Kompatibilität
+          
+          // Dritter TURN-Server (Numb)
           {
             urls: [
               'turn:numb.viagenie.ca:3478',
@@ -99,15 +98,36 @@ export function initViewerApp() {
             ],
             username: 'webrtc@live.com',
             credential: 'muazkh'
+          },
+          
+          // Zusätzliche freie TURN-Server
+          {
+            urls: [
+              'turn:turn.anyfirewall.com:443?transport=tcp',
+              'turn:turn.anyfirewall.com:443'
+            ],
+            username: 'webrtc',
+            credential: 'webrtc'
           }
         ],
-        'iceCandidatePoolSize': 30, // Mehr Candidates für Internet
-        'bundlePolicy': 'max-bundle', // Bessere Internet-Kompatibilität
+        
+        // AGGRESSIVERE ICE-Konfiguration für Internet
+        'iceCandidatePoolSize': 50, // Mehr Candidates sammeln
+        'bundlePolicy': 'max-bundle',
         'rtcpMuxPolicy': 'require',
-        // FORCIERE TURN-Server für Internet (auskommentieren für WLAN)
-        'iceTransportPolicy': 'relay', // NUR TURN-Server, kein direktes P2P
-        'sdpSemantics': 'unified-plan'
-      }
+        
+        // FORCIERE TURN-Server (nur Relay, kein direktes P2P)
+        'iceTransportPolicy': 'relay', // NUR über TURN-Server
+        
+        // Moderne WebRTC-Konfiguration
+        'sdpSemantics': 'unified-plan',
+        
+        // Zusätzliche Optionen für problematische Netzwerke
+        'continualGatheringPolicy': 'gather_continually'
+      },
+      
+      // PeerJS-spezifische Optionen
+      debug: 1 // Mehr Debug-Ausgabe
     });
 
     return peer;
@@ -173,12 +193,15 @@ export function initViewerApp() {
               debugLog(`🧊 ICE Candidate gesammelt: ${event.candidate.type} - ${event.candidate.address || 'no-address'}`);
             } else {
               debugLog('🧊 ICE Gathering abgeschlossen');
+              debugLog(`🔍 ICE Connection State nach Gathering: ${call.peerConnection.iceConnectionState}`);
+              debugLog(`🔍 Connection State nach Gathering: ${call.peerConnection.connectionState}`);
             }
           });
           
           call.peerConnection.addEventListener('iceconnectionstatechange', () => {
             const state = call.peerConnection.iceConnectionState;
-            debugLog(`🧊 ICE Connection State: ${state}`);
+            const connState = call.peerConnection.connectionState;
+            debugLog(`🧊 ICE Connection State: ${state} | Connection State: ${connState}`);
             
             if (state === 'failed') {
               debugLog('❌ ICE-Verbindung fehlgeschlagen - wahrscheinlich NAT/Firewall Problem', 'error');
@@ -203,6 +226,9 @@ export function initViewerApp() {
             } else if (state === 'connecting') {
               debugLog('🔄 ICE-Verbindung wird aufgebaut...');
               statusEl.textContent = 'Status: verbinde 🔄';
+            } else if (state === 'checking') {
+              debugLog('🔍 ICE-Verbindung wird getestet...');
+              statusEl.textContent = 'Status: teste Verbindung 🔍';
             }
           });
           
@@ -224,14 +250,17 @@ export function initViewerApp() {
         // Stream-Details loggen
         stream.getVideoTracks().forEach((track, i) => {
           const settings = track.getSettings();
-          debugLog(`📹 Video Track ${i}: ${settings.width}x${settings.height}@${settings.frameRate}fps`);
+          const constraints = track.getConstraints();
+          debugLog(`📹 Video Track ${i}: ${settings.width || 'auto'}x${settings.height || 'auto'}@${settings.frameRate || 'auto'}fps`);
           debugLog(`📹 Video Track ${i} State: ${track.readyState}`);
+          debugLog(`📹 Video Track ${i} Settings:`, settings);
         });
         
         stream.getAudioTracks().forEach((track, i) => {
           const settings = track.getSettings();
-          debugLog(`🔊 Audio Track ${i}: ${settings.sampleRate}Hz, ${settings.channelCount} channels`);
+          debugLog(`🔊 Audio Track ${i}: ${settings.sampleRate || 'auto'}Hz, ${settings.channelCount || 'auto'} channels`);
           debugLog(`🔊 Audio Track ${i} State: ${track.readyState}`);
+          debugLog(`🔊 Audio Track ${i} Settings:`, settings);
         });
         
         remoteVideo.srcObject = stream;
