@@ -253,15 +253,15 @@ export function initStreamerApp() {
 
   async function getCam() {
     try {
-      // 🔥 MAXIMALE AUFLÖSUNG für alle Geräte
+      // 🌐 INTERNET-OPTIMIERTE AUFLÖSUNG (reduziert für TURN-Server)
       const videoConstraints = {
-        width: { ideal: 4096 },    // 4K wenn verfügbar
-        height: { ideal: 2160 },   // 4K Höhe  
-        frameRate: { ideal: 60, min: 30 },
+        width: { ideal: 1920, max: 2560 },    // Maximal 1440p für Internet
+        height: { ideal: 1080, max: 1440 },   // Maximal 1440p Höhe  
+        frameRate: { ideal: 30, max: 30 },    // Reduzierte Framerate für Bandbreite
         advanced: [
-          { width: { ideal: 4096 } },
-          { height: { ideal: 2160 } },
-          { frameRate: { ideal: 60, min: 30 } }
+          { width: { ideal: 1920 } },
+          { height: { ideal: 1080 } },
+          { frameRate: { ideal: 30 } }
         ]
       };
 
@@ -289,29 +289,29 @@ export function initStreamerApp() {
       console.log('� Max Video Settings:', localStream.getVideoTracks()[0].getSettings());
       
     } catch (err) {
-      console.warn(`⚠️ ${device.type} Fallback zu hoher Qualität:`, err.message);
+      console.warn(`⚠️ ${device.type} Fallback zu mittlerer Qualität:`, err.message);
       
       try {
-        // 🎯 Erster Fallback: Immer noch sehr hohe Qualität
+        // 🎯 Erster Fallback: Mittlere Qualität für Internet
         let fallbackConstraints = { 
-          width: { ideal: 2560 },    // 1440p
-          height: { ideal: 1440 },   
-          frameRate: { ideal: 30 } 
+          width: { ideal: 1280 },    // 720p für bessere TURN-Kompatibilität
+          height: { ideal: 720 },   
+          frameRate: { ideal: 25 } 
         };
         
         localStream = await navigator.mediaDevices.getUserMedia({ 
           video: fallbackConstraints,
-          audio: { echoCancellation: true, sampleRate: 48000 }
+          audio: { echoCancellation: true, sampleRate: 44100 }
         });
-        console.log(`✅ ${device.type} High-Quality Fallback erfolgreich`);
+        console.log(`✅ ${device.type} Internet-Fallback erfolgreich`);
       } catch (fallbackErr) {
-        // 📱 Letzter Fallback: Standard aber immer noch gut
+        // 📱 Letzter Fallback: Minimale Qualität für schwache Verbindungen
         try {
           localStream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-              frameRate: { ideal: 30 } 
+              width: { ideal: 640 },    // Sehr niedrig für TURN-Server
+              height: { ideal: 480 },
+              frameRate: { ideal: 15 } 
             },
             audio: { echoCancellation: true, sampleRate: 48000 }
           });
@@ -337,17 +337,39 @@ export function initStreamerApp() {
         'iceServers': [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
+          // INTERNET-OPTIMIERTE TURN-Server
           {
-            urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
+            urls: [
+              'turn:openrelay.metered.ca:80', 
+              'turn:openrelay.metered.ca:443',
+              'turn:openrelay.metered.ca:80?transport=tcp',
+              'turn:openrelay.metered.ca:443?transport=tcp'
+            ],
             username: 'openrelayproject',
             credential: 'openrelayproject'
+          },
+          {
+            urls: [
+              'turn:relay1.expressturn.com:3478',
+              'turn:relay1.expressturn.com:3478?transport=tcp'
+            ],
+            username: 'efSCKZqnZbF2RfHZ68',
+            credential: 'web@anyfirewall.com'
+          },
+          {
+            urls: [
+              'turn:numb.viagenie.ca:3478',
+              'turn:numb.viagenie.ca:3478?transport=tcp'
+            ],
+            username: 'webrtc@live.com',
+            credential: 'muazkh'
           }
         ],
-        'iceCandidatePoolSize': 10,
-        'bundlePolicy': 'max-bundle',        // WLAN-optimiert
+        'iceCandidatePoolSize': 30,       // Mehr Candidates für Internet
+        'bundlePolicy': 'max-bundle',     // Internet-optimiert
         'rtcpMuxPolicy': 'require',
         'sdpSemantics': 'unified-plan',
-        'iceTransportPolicy': 'all'
+        'iceTransportPolicy': 'relay'     // FORCIERE TURN-Server für Internet
       }
     });
   }
