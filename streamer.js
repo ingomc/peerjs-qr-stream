@@ -113,7 +113,55 @@ export function initStreamerApp() {
           });
           
         } catch (testErr) {
-          console.warn(`❌ Kamera nicht verfügbar: ${label}`);
+          console.warn(`❌ 4K Test fehlgeschlagen für: ${label}, versuche Fallback...`);
+          
+          // 🔄 FALLBACK: Wenn 4K fehlschlägt, versuche Full HD
+          try {
+            let fallbackConstraints = { 
+              deviceId: { exact: camera.deviceId },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              frameRate: { ideal: 30 }
+            };
+            
+            const fallbackStream = await navigator.mediaDevices.getUserMedia({
+              video: fallbackConstraints,
+              audio: false
+            });
+            
+            const videoTrack = fallbackStream.getVideoTracks()[0];
+            const settings = videoTrack.getSettings();
+            fallbackStream.getTracks().forEach(track => track.stop());
+            
+            console.log(`✅ Fallback erfolgreich: ${label} → ${settings.width}x${settings.height}`);
+            
+            const icon = label.toLowerCase().includes('front') || label.toLowerCase().includes('user') ? '🤳' : '📷';
+            const totalPixels = settings.width * settings.height;
+            const qualityBadge = totalPixels >= 1920*1080 ? ' 🏆' : (totalPixels >= 1280*720 ? ' ⭐' : ' ✅');
+            
+            workingCameras.push({
+              deviceId: camera.deviceId,
+              label: label,
+              icon: icon,
+              resolution: `${settings.width}x${settings.height}`,
+              qualityBadge: qualityBadge,
+              pixels: totalPixels
+            });
+            
+          } catch (fallbackErr) {
+            console.warn(`⚠️ Auch Fallback fehlgeschlagen für: ${label}, füge trotzdem hinzu`);
+            
+            // 📱 IMMER HINZUFÜGEN: Auch wenn Test fehlschlägt
+            const icon = label.toLowerCase().includes('front') || label.toLowerCase().includes('user') ? '🤳' : '📷';
+            workingCameras.push({
+              deviceId: camera.deviceId,
+              label: label,
+              icon: icon,
+              resolution: 'Test fehlgeschlagen',
+              qualityBadge: ' ❓',
+              pixels: 0
+            });
+          }
         }
       }
       
