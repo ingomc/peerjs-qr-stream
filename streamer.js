@@ -67,13 +67,16 @@ export function initStreamerApp() {
         cameraStatus.textContent = `🧪 Teste ${i + 1}/${availableCameras.length}: ${label}`;
         
         try {
-          // Hardware-Test mit optimaler Auflösung für das Gerät
+          // � MAXIMALE AUFLÖSUNG für alle Geräte - keine Limits!
+          let testConstraints = { 
+            deviceId: { exact: camera.deviceId },
+            width: { ideal: 4096 },  // 4K wenn verfügbar
+            height: { ideal: 2160 }, // 4K Höhe
+            frameRate: { ideal: 60, min: 30 }  // Beste Framerate
+          };
+          
           const testStream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-              deviceId: { exact: camera.deviceId },
-              width: { ideal: 720, max: 1280 },    // Flexibler für verschiedene Geräte
-              height: { ideal: 1280, max: 1920 }   // S25U kann mehr, iPhone XS weniger
-            },
+            video: testConstraints,
             audio: false
           });
           
@@ -81,14 +84,24 @@ export function initStreamerApp() {
           const settings = videoTrack.getSettings();
           testStream.getTracks().forEach(track => track.stop());
           
-          console.log(`✅ iPhone XS Kamera funktioniert: ${settings.width}x${settings.height}`);
+          console.log(`✅ ${device.type} Kamera: ${label} → ${settings.width}x${settings.height}@${settings.frameRate}fps`);
           
-          const icon = label.toLowerCase().includes('front') || label.toLowerCase().includes('user') ? '🤳' : '📷';
+          // 📷 Intelligente Kamera-Erkennung
+          const isRearCamera = label.toLowerCase().includes('back') || 
+                              label.toLowerCase().includes('rear') || 
+                              label.toLowerCase().includes('hauptkamera') ||
+                              label.toLowerCase().includes('environment') ||
+                              (!label.toLowerCase().includes('front') && !label.toLowerCase().includes('user'));
+          
+          const icon = isRearCamera ? '📷' : '🤳';
+          
+          // 🏆 Qualitätsbewertung basierend auf Pixeln
           let qualityBadge = '';
           const totalPixels = settings.width * settings.height;
-          if (totalPixels >= 720*1280) qualityBadge = ' 🏆';
-          else if (totalPixels >= 540*960) qualityBadge = ' ⭐';
-          else qualityBadge = ' ✅';
+          if (totalPixels >= 3840*2160) qualityBadge = ' 🔥'; // 4K
+          else if (totalPixels >= 1920*1080) qualityBadge = ' 🏆'; // Full HD
+          else if (totalPixels >= 1280*720) qualityBadge = ' ⭐'; // HD
+          else qualityBadge = ' ✅'; // Standard
           
           workingCameras.push({
             deviceId: camera.deviceId,
@@ -100,7 +113,7 @@ export function initStreamerApp() {
           });
           
         } catch (testErr) {
-          console.warn(`❌ iPhone XS Kamera nicht verfügbar: ${label}`);
+          console.warn(`❌ Kamera nicht verfügbar: ${label}`);
         }
       }
       
@@ -114,15 +127,15 @@ export function initStreamerApp() {
       });
       
       if (workingCameras.length === 0) {
-        cameraStatus.textContent = '❌ Keine iPhone XS Kameras funktionsfähig';
+        cameraStatus.textContent = '❌ Keine Kameras funktionsfähig';
         cameraStatus.style.color = 'red';
       } else {
-        cameraStatus.textContent = `✅ ${workingCameras.length} iPhone XS Kameras bereit`;
+        cameraStatus.textContent = `✅ ${workingCameras.length} Kameras bereit`;
         cameraStatus.style.color = 'green';
       }
       
     } catch (err) {
-      console.error('❌ Fehler beim Laden der iPhone XS Kameras:', err);
+      console.error('❌ Fehler beim Laden der Kameras:', err);
       cameraStatus.textContent = `❌ Fehler: ${err.message}`;
       cameraStatus.style.color = 'red';
     }
@@ -130,7 +143,7 @@ export function initStreamerApp() {
 
   cameraSelect.addEventListener('change', () => {
     selectedCameraId = cameraSelect.value === 'auto' ? null : cameraSelect.value;
-    console.log('📷 iPhone XS Kamera gewählt:', selectedCameraId || 'Automatisch');
+    console.log('📷 Kamera gewählt:', selectedCameraId || 'Automatisch');
     
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
@@ -143,12 +156,42 @@ export function initStreamerApp() {
       cameraStatus.textContent = `🔐 Fordere ${device.type} Kamera-Berechtigung an...`;
       cameraStatus.style.color = '#666';
       
-      // 📱 WICHTIG: Zuerst Kamera-Berechtigung anfordern
-      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      console.log('✅ Kamera-Berechtigung erhalten');
+      // 📱 WICHTIG: Mehrere Berechtigungen für alle Kameras anfordern
+      console.log('🔐 Fordere Kamera-Berechtigungen an...');
       
-      // Temp-Stream sofort wieder stoppen
-      tempStream.getTracks().forEach(track => track.stop());
+      // Erst Frontkamera
+      try {
+        const frontStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'user' } 
+        });
+        frontStream.getTracks().forEach(track => track.stop());
+        console.log('✅ Front-Kamera Berechtigung erhalten');
+      } catch (frontErr) {
+        console.warn('⚠️ Front-Kamera nicht verfügbar');
+      }
+      
+      // Dann Rückkamera
+      try {
+        const backStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' } 
+        });
+        backStream.getTracks().forEach(track => track.stop());
+        console.log('✅ Rück-Kamera Berechtigung erhalten');
+      } catch (backErr) {
+        console.warn('⚠️ Rück-Kamera nicht verfügbar');
+      }
+      
+      // Generische Berechtigung für alle anderen
+      try {
+        const genericStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        genericStream.getTracks().forEach(track => track.stop());
+        console.log('✅ Generische Kamera-Berechtigung erhalten');
+      } catch (genericErr) {
+        console.warn('⚠️ Generische Kamera-Berechtigung fehlgeschlagen');
+      }
+      
+      // Kurz warten damit Browser alle Kameras registriert
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Jetzt können wir alle Kameras richtig erkennen
       await loadAvailableCameras();
@@ -162,9 +205,16 @@ export function initStreamerApp() {
 
   async function getCam() {
     try {
-      // 🎯 NATIVE KAMERA-AUFLÖSUNG verwenden (keine erzwungenen Constraints)
+      // 🔥 MAXIMALE AUFLÖSUNG für alle Geräte
       const videoConstraints = {
-        frameRate: { ideal: 30 }  // Nur Framerate optimieren, Rest nativ lassen
+        width: { ideal: 4096 },    // 4K wenn verfügbar
+        height: { ideal: 2160 },   // 4K Höhe  
+        frameRate: { ideal: 60, min: 30 },
+        advanced: [
+          { width: { ideal: 4096 } },
+          { height: { ideal: 2160 } },
+          { frameRate: { ideal: 60, min: 30 } }
+        ]
       };
 
       if (selectedCameraId) {
@@ -187,23 +237,40 @@ export function initStreamerApp() {
         }
       });
       
-      console.log(`${device.icon} ${device.type} Kamera aktiviert - verwendet native Auflösung!`);
-      console.log('📹 Native Video Settings:', localStream.getVideoTracks()[0].getSettings());
+      console.log(`${device.icon} ${device.type} Kamera aktiviert mit MAXIMALER Qualität!`);
+      console.log('� Max Video Settings:', localStream.getVideoTracks()[0].getSettings());
       
     } catch (err) {
-      console.warn(`⚠️ ${device.type} Fallback wird verwendet:`, err.message);
+      console.warn(`⚠️ ${device.type} Fallback zu hoher Qualität:`, err.message);
       
       try {
-        // 🎯 Auch Fallback ohne erzwungene Auflösung
+        // 🎯 Erster Fallback: Immer noch sehr hohe Qualität
+        let fallbackConstraints = { 
+          width: { ideal: 2560 },    // 1440p
+          height: { ideal: 1440 },   
+          frameRate: { ideal: 30 } 
+        };
+        
         localStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            frameRate: { ideal: 30 }  // Nur Framerate, keine Auflösungs-Zwang
-          }, 
+          video: fallbackConstraints,
           audio: { echoCancellation: true, sampleRate: 48000 }
         });
-        console.log(`✅ ${device.type} Fallback erfolgreich mit nativer Auflösung`);
+        console.log(`✅ ${device.type} High-Quality Fallback erfolgreich`);
       } catch (fallbackErr) {
-        throw new Error(`${device.type} Kamera nicht verfügbar: ` + fallbackErr.message);
+        // 📱 Letzter Fallback: Standard aber immer noch gut
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              frameRate: { ideal: 30 } 
+            },
+            audio: { echoCancellation: true, sampleRate: 48000 }
+          });
+          console.log(`✅ ${device.type} Standard-Fallback erfolgreich`);
+        } catch (finalErr) {
+          throw new Error(`${device.type} Kamera nicht verfügbar: ` + finalErr.message);
+        }
       }
     }
     
