@@ -185,38 +185,9 @@ export function initStreamerApp() {
     
     const videoTrack = localStream.getVideoTracks()[0];
     const settings = videoTrack.getSettings();
-    const aspectRatio = settings.width / settings.height;
-    
-    // 📱 WICHTIG: Lokales Video-Element SOFORT auf richtige Orientierung setzen
-    if (aspectRatio < 1) {
-      // HOCHKANT-Stream (720x1280) -> Video-Element auch hochkant
-      console.log('📱 HOCHKANT-Stream erkannt - lokales Video wird angepasst');
-      localVideo.style.width = 'auto';
-      localVideo.style.height = '400px'; // Feste Höhe
-      localVideo.style.maxWidth = '300px'; // Verhindert zu breite Darstellung
-      localVideo.style.objectFit = 'contain';
-      localVideo.style.margin = '0 auto';
-      localVideo.style.display = 'block';
-      
-      // Container auch anpassen
-      const videoContainer = localVideo.parentElement;
-      if (videoContainer) {
-        videoContainer.style.display = 'flex';
-        videoContainer.style.justifyContent = 'center';
-        videoContainer.style.alignItems = 'center';
-        videoContainer.style.minHeight = '400px';
-      }
-    } else {
-      // BREITBILD-Stream -> normale Darstellung
-      console.log('📺 BREITBILD-Stream erkannt - normale Darstellung');
-      localVideo.style.width = '100%';
-      localVideo.style.height = 'auto';
-      localVideo.style.maxWidth = '100%';
-      localVideo.style.objectFit = 'contain';
-    }
     
     console.log(`🎥 ${device.type} Stream: ${settings.width}x${settings.height} @ ${settings.frameRate}fps`);
-    console.log(`📐 Seitenverhältnis: ${aspectRatio.toFixed(3)} → Lokales Video angepasst!`);
+    console.log(`📐 Video wird automatisch per CSS angepasst - keine JavaScript-Manipulation nötig!`);
   }
 
   function createPeer() {
