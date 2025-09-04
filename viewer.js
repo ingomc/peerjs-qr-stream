@@ -15,7 +15,7 @@ export function initViewerApp() {
   // Console-Logging für Verbindungsdiagnose
   function debugLog(message, type = 'info') {
     const timestamp = new Date().toLocaleTimeString();
-    const safeType = type || 'info';
+    const safeType = String(type || 'info');
     const prefix = `[${timestamp}] [VIEWER-${safeType.toUpperCase()}]`;
     
     switch(safeType) {
@@ -136,7 +136,7 @@ export function initViewerApp() {
     currentPeer.on('call', call => {
       statusEl.textContent = 'Status: eingehender Anruf…';
       debugLog('📞 Eingehender Anruf vom Handy erhalten');
-      debugLog('📋 Call Details:', call);
+      debugLog('📋 Call Details: ' + JSON.stringify({peer: call?.peer, type: call?.type}));
       
       // Debug: Warum wird Verbindung nicht angenommen?
       if (!call) {
