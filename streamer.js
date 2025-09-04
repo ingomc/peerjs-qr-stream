@@ -31,12 +31,27 @@ export function initStreamerApp() {
 
   // 📹 UNIVERSAL KAMERA-AUSWAHL (alle Geräte)
   async function loadAvailableCameras() {
-    cameraStatus.textContent = `🧪 Teste ${device.type} Kameras...`;
+    cameraStatus.textContent = `🧪 Lade ${device.type} Kameras...`;
     cameraStatus.style.color = '#666';
     
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       availableCameras = devices.filter(device => device.kind === 'videoinput');
+      
+      // 🔍 Prüfe ob Kamera-Labels verfügbar sind (= Berechtigung vorhanden)
+      const hasPermission = availableCameras.some(camera => camera.label && camera.label !== '');
+      
+      if (!hasPermission && availableCameras.length > 0) {
+        console.log('⚠️ Kameras gefunden, aber keine Labels - Berechtigung fehlt');
+        cameraStatus.textContent = `🔐 ${availableCameras.length} Kameras gefunden - klicke "Neu laden" für Details`;
+        cameraStatus.style.color = '#f57c00';
+        
+        cameraSelect.innerHTML = '<option value="auto">🤖 Automatisch (Berechtigung erforderlich)</option>';
+        availableCameras.forEach((camera, i) => {
+          cameraSelect.innerHTML += `<option value="${camera.deviceId}">📷 Kamera ${i + 1} (Berechtigung erforderlich)</option>`;
+        });
+        return;
+      }
       
       console.log(`📱 ${availableCameras.length} ${device.type} Kameras gefunden:`, availableCameras);
       cameraStatus.textContent = `🔍 ${availableCameras.length} Kameras gefunden, teste Hardware-Encoding...`;
@@ -123,7 +138,27 @@ export function initStreamerApp() {
     }
   });
 
-  btnRefreshCameras.addEventListener('click', loadAvailableCameras);
+  btnRefreshCameras.addEventListener('click', async () => {
+    try {
+      cameraStatus.textContent = `🔐 Fordere ${device.type} Kamera-Berechtigung an...`;
+      cameraStatus.style.color = '#666';
+      
+      // 📱 WICHTIG: Zuerst Kamera-Berechtigung anfordern
+      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      console.log('✅ Kamera-Berechtigung erhalten');
+      
+      // Temp-Stream sofort wieder stoppen
+      tempStream.getTracks().forEach(track => track.stop());
+      
+      // Jetzt können wir alle Kameras richtig erkennen
+      await loadAvailableCameras();
+      
+    } catch (error) {
+      console.error('❌ Kamera-Berechtigung verweigert:', error);
+      cameraStatus.textContent = `❌ ${device.type} Kamera-Berechtigung verweigert`;
+      cameraStatus.style.color = '#d32f2f';
+    }
+  });
 
   async function getCam() {
     try {
