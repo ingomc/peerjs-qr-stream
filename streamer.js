@@ -1,5 +1,5 @@
 export function initStreamerApp() {
-  console.log('🍎 iPhone XS Streamer App wird initialisiert (WLAN-optimiert)');
+  console.log('📱 Multi-Device Streamer App (Hardware-Encoding optimiert)');
   const statusEl = document.getElementById('status');
   const localVideo = document.getElementById('local');
   const cameraSelect = document.getElementById('cameraSelect');
@@ -14,16 +14,31 @@ export function initStreamerApp() {
   let availableCameras = [];
   let selectedCameraId = null;
 
-  // 📹 KAMERA-AUSWAHL FUNKTIONEN (iPhone XS optimiert)
+  // � DEVICE-DETECTION für optimale Einstellungen
+  function detectDevice() {
+    const userAgent = navigator.userAgent;
+    if (userAgent.includes('iPhone')) {
+      return { type: 'iPhone', icon: '🍎', encoding: 'H264-Hardware' };
+    } else if (userAgent.includes('Android')) {
+      return { type: 'Android', icon: '🤖', encoding: 'H264-Hardware' };
+    } else {
+      return { type: 'Unknown', icon: '📱', encoding: 'Software' };
+    }
+  }
+
+  const device = detectDevice();
+  console.log(`${device.icon} Device erkannt: ${device.type} mit ${device.encoding}`);
+
+  // 📹 UNIVERSAL KAMERA-AUSWAHL (alle Geräte)
   async function loadAvailableCameras() {
-    cameraStatus.textContent = '🧪 Teste iPhone XS Kameras...';
+    cameraStatus.textContent = `🧪 Teste ${device.type} Kameras...`;
     cameraStatus.style.color = '#666';
     
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       availableCameras = devices.filter(device => device.kind === 'videoinput');
       
-      console.log(`📱 ${availableCameras.length} iPhone XS Kameras gefunden:`, availableCameras);
+      console.log(`📱 ${availableCameras.length} ${device.type} Kameras gefunden:`, availableCameras);
       cameraStatus.textContent = `🔍 ${availableCameras.length} Kameras gefunden, teste Hardware-Encoding...`;
       
       cameraSelect.innerHTML = '<option value="auto">🤖 Automatisch (Rückkamera bevorzugt)</option>';
@@ -37,12 +52,12 @@ export function initStreamerApp() {
         cameraStatus.textContent = `🧪 Teste ${i + 1}/${availableCameras.length}: ${label}`;
         
         try {
-          // iPhone XS Hardware-Test mit 720p
+          // Hardware-Test mit optimaler Auflösung für das Gerät
           const testStream = await navigator.mediaDevices.getUserMedia({
             video: { 
               deviceId: { exact: camera.deviceId },
-              width: { ideal: 720, max: 720 },
-              height: { ideal: 1280, max: 1280 }
+              width: { ideal: 720, max: 1280 },    // Flexibler für verschiedene Geräte
+              height: { ideal: 1280, max: 1920 }   // S25U kann mehr, iPhone XS weniger
             },
             audio: false
           });
@@ -112,16 +127,16 @@ export function initStreamerApp() {
 
   async function getCam() {
     try {
-      // 📱 iPhone XS Hardware-Encoder optimierte Constraints
+      // 📱 DEVICE-OPTIMIERTE Constraints (iPhone XS, Galaxy S25U, etc.)
       const videoConstraints = {
-        width: { ideal: 720, max: 720, min: 540 },      // iPhone XS optimal
-        height: { ideal: 1280, max: 1280, min: 960 },   // Hochkant 9:16
-        frameRate: { ideal: 30, max: 30, min: 24 },     // Hardware-Encoder optimal
+        width: { ideal: 720, max: 1280, min: 540 },      // Flexibel für verschiedene Geräte
+        height: { ideal: 1280, max: 1920, min: 960 },    // S25U kann mehr, iPhone XS weniger
+        frameRate: { ideal: 30, max: 30, min: 24 },      // Hardware-Encoder optimal
         advanced: [
-          { width: { min: 540, ideal: 720, max: 720 } },
-          { height: { min: 960, ideal: 1280, max: 1280 } },
+          { width: { min: 540, ideal: 720, max: 1280 } },
+          { height: { min: 960, ideal: 1280, max: 1920 } },
           { frameRate: { min: 24, ideal: 30, max: 30 } },
-          { aspectRatio: { ideal: 0.5625 } }
+          { aspectRatio: { ideal: 0.5625 } }              // 9:16 bevorzugt
         ]
       };
 
@@ -145,11 +160,11 @@ export function initStreamerApp() {
         }
       });
       
-      console.log('🍎 iPhone XS Kamera aktiviert mit Hardware-Encoding!');
-      console.log('📹 iPhone XS Video Settings:', localStream.getVideoTracks()[0].getSettings());
+      console.log(`${device.icon} ${device.type} Kamera aktiviert mit Hardware-Encoding!`);
+      console.log('📹 Video Settings:', localStream.getVideoTracks()[0].getSettings());
       
     } catch (err) {
-      console.warn('⚠️ iPhone XS Fallback wird verwendet:', err.message);
+      console.warn(`⚠️ ${device.type} Fallback wird verwendet:`, err.message);
       
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ 
@@ -160,9 +175,9 @@ export function initStreamerApp() {
           }, 
           audio: { echoCancellation: true, sampleRate: 48000 }
         });
-        console.log('✅ iPhone XS Fallback erfolgreich');
+        console.log(`✅ ${device.type} Fallback erfolgreich`);
       } catch (fallbackErr) {
-        throw new Error('iPhone XS Kamera nicht verfügbar: ' + fallbackErr.message);
+        throw new Error(`${device.type} Kamera nicht verfügbar: ` + fallbackErr.message);
       }
     }
     
@@ -172,8 +187,36 @@ export function initStreamerApp() {
     const settings = videoTrack.getSettings();
     const aspectRatio = settings.width / settings.height;
     
-    console.log(`🎥 iPhone XS Stream: ${settings.width}x${settings.height} @ ${settings.frameRate}fps`);
-    console.log(`📐 Seitenverhältnis: ${aspectRatio.toFixed(3)}`);
+    // 📱 WICHTIG: Lokales Video-Element SOFORT auf richtige Orientierung setzen
+    if (aspectRatio < 1) {
+      // HOCHKANT-Stream (720x1280) -> Video-Element auch hochkant
+      console.log('📱 HOCHKANT-Stream erkannt - lokales Video wird angepasst');
+      localVideo.style.width = 'auto';
+      localVideo.style.height = '400px'; // Feste Höhe
+      localVideo.style.maxWidth = '300px'; // Verhindert zu breite Darstellung
+      localVideo.style.objectFit = 'contain';
+      localVideo.style.margin = '0 auto';
+      localVideo.style.display = 'block';
+      
+      // Container auch anpassen
+      const videoContainer = localVideo.parentElement;
+      if (videoContainer) {
+        videoContainer.style.display = 'flex';
+        videoContainer.style.justifyContent = 'center';
+        videoContainer.style.alignItems = 'center';
+        videoContainer.style.minHeight = '400px';
+      }
+    } else {
+      // BREITBILD-Stream -> normale Darstellung
+      console.log('📺 BREITBILD-Stream erkannt - normale Darstellung');
+      localVideo.style.width = '100%';
+      localVideo.style.height = 'auto';
+      localVideo.style.maxWidth = '100%';
+      localVideo.style.objectFit = 'contain';
+    }
+    
+    console.log(`🎥 ${device.type} Stream: ${settings.width}x${settings.height} @ ${settings.frameRate}fps`);
+    console.log(`📐 Seitenverhältnis: ${aspectRatio.toFixed(3)} → Lokales Video angepasst!`);
   }
 
   function createPeer() {
