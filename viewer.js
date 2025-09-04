@@ -117,7 +117,10 @@ export function initViewerApp() {
         'rtcpMuxPolicy': 'require',
         
         // FORCIERE TURN-Server (nur Relay, kein direktes P2P)
-        'iceTransportPolicy': 'relay', // NUR über TURN-Server
+        // 'iceTransportPolicy': 'relay', // NUR über TURN-Server
+        
+        // TESTE: Erlaube auch direkte Verbindungen
+        'iceTransportPolicy': 'all', // Versuche alle Verbindungsarten
         
         // Moderne WebRTC-Konfiguration
         'sdpSemantics': 'unified-plan',

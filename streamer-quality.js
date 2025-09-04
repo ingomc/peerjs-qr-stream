@@ -115,7 +115,10 @@ export function initStreamerApp() {
       'iceCandidatePoolSize': 30,
       'bundlePolicy': 'max-bundle',
       'rtcpMuxPolicy': 'require',
-      'iceTransportPolicy': 'relay', // FORCIERE TURN-Server
+      // 'iceTransportPolicy': 'relay', // FORCIERE TURN-Server
+      
+      // TESTE: Erlaube auch direkte Verbindungen für Internet
+      'iceTransportPolicy': 'all', // Versuche alle Verbindungsarten
       'sdpSemantics': 'unified-plan'
     };
     
