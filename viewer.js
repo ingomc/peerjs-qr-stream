@@ -15,9 +15,10 @@ export function initViewerApp() {
   // Console-Logging für Verbindungsdiagnose
   function debugLog(message, type = 'info') {
     const timestamp = new Date().toLocaleTimeString();
-    const prefix = `[${timestamp}] [VIEWER-${type.toUpperCase()}]`;
+    const safeType = type || 'info';
+    const prefix = `[${timestamp}] [VIEWER-${safeType.toUpperCase()}]`;
     
-    switch(type) {
+    switch(safeType) {
       case 'error':
         console.error(prefix, message);
         break;
