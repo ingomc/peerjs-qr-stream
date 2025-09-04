@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🌐 Viewer Internet • PeerJS QR Stream</title>
+  <style>
+    body {
+      font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      color: #333;
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 32px;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    
+    .status-panel {
+      background: #f7fafc;
+      border-left: 4px solid #4299e1;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+    
+    #status {
+      font-weight: 600;
+      color: #2d3748;
+    }
+    
+    #pid {
+      font-family: 'Courier New', monospace;
+      background: #edf2f7;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      color: #2d3748;
+      margin-top: 8px;
+      display: inline-block;
+    }
+    
+    .video-container {
+      position: relative;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      margin-bottom: 24px;
+    }
+    
+    #remote {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .start-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      text-align: center;
+    }
+    
+    .start-screen h2 {
+      color: #4a5568;
+      margin-bottom: 16px;
+    }
+    
+    .start-screen p {
+      color: #718096;
+      margin-bottom: 24px;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+    
+    #btnStartStream {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    #btnStartStream:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(102, 126, 234, 0.4);
+    }
+    
+    .qr-section {
+      display: none;
+      text-align: center;
+    }
+    
+    .qr-container {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      margin: 0 auto 24px;
+      width: fit-content;
+    }
+    
+    .link-section {
+      background: #f7fafc;
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 24px;
+    }
+    
+    .link-section h4 {
+      margin-bottom: 12px;
+      color: #2d3748;
+    }
+    
+    #link {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: #4299e1;
+      word-break: break-all;
+      text-decoration: none;
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      display: block;
+      border: 1px solid #e2e8f0;
+    }
+    
+    #link:hover {
+      background: #edf2f7;
+    }
+    
+    .internet-info {
+      background: #fef5e7;
+      border: 1px solid #ed8936;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 24px;
+    }
+    
+    .internet-info h4 {
+      color: #c05621;
+      margin-bottom: 8px;
+    }
+    
+    .internet-info p {
+      color: #c05621;
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .turn-info {
+      background: #e6fffa;
+      border: 1px solid #38b2ac;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 16px;
+      font-size: 12px;
+    }
+    
+    .turn-info strong {
+      color: #234e52;
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+      
+      .container {
+        padding: 20px;
+      }
+      
+      h1 {
+        font-size: 24px;
+        flex-direction: column;
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <span>🌐</span>
+      <span>Viewer Internet</span>
+      <small style="font-size: 14px; color: #718096;">v1.0.8-internet</small>
+    </h1>
+    
+    <!-- Start Screen -->
+    <div id="startScreen" class="start-screen">
+      <h2>Internet-Stream empfangen</h2>
+      <p>
+        Diese Version ist speziell für <strong>Internet-Verbindungen</strong> optimiert und nutzt TURN-Server 
+        um NAT/Firewall-Probleme zu umgehen. Funktioniert auch wenn Streamer und Viewer 
+        in verschiedenen Netzwerken sind.
+      </p>
+      <button id="btnStartStream">🚀 Internet-Stream starten</button>
+      
+      <div class="internet-info">
+        <h4>🌐 Internet-Optimierungen:</h4>
+        <p>
+          • <strong>TURN-Server forciert</strong> - Relay über externe Server<br>
+          • <strong>Mehrere TURN-Provider</strong> - Fallback-Strategien<br>
+          • <strong>TCP + UDP</strong> - Verschiedene Protokolle<br>
+          • <strong>Port 80/443</strong> - Firewall-kompatible Ports<br>
+          • <strong>Längere Timeouts</strong> - Für langsame Verbindungen
+        </p>
+        
+        <div class="turn-info">
+          <strong>Warum TURN-Server?</strong><br>
+          Bei Internet-Verbindungen sind beide Geräte meist hinter NAT/Firewalls. 
+          TURN-Server fungieren als Relay und ermöglichen die Verbindung.
+        </div>
+      </div>
+    </div>
+    
+    <!-- QR Section -->
+    <div id="qrSection" class="qr-section">
+      <div class="status-panel">
+        <div id="status">Status: Wird initialisiert...</div>
+        <div>Peer-ID: <span id="pid">-</span></div>
+      </div>
+      
+      <div class="video-container">
+        <video id="remote" playsinline autoplay></video>
+      </div>
+      
+      <h3>QR für Streamer</h3>
+      <div class="qr-container">
+        <div id="qrcode"></div>
+      </div>
+      
+      <div class="link-section">
+        <h4>Oder Link kopieren:</h4>
+        <a id="link" href="#" target="_blank">Link wird generiert...</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- QRCode.js -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  
+  <!-- PeerJS -->
+  <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+  
+  <!-- Internet Optimized Viewer -->
+  <script type="module">
+    import { initInternetOptimizedViewer } from './viewer-internet.js';
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🌐 Internet-Optimized-Viewer wird geladen...');
+      
+      if (!navigator.mediaDevices || !window.RTCPeerConnection) {
+        document.getElementById('status').textContent = 'Fehler: Browser unterstützt WebRTC nicht';
+        return;
+      }
+      
+      try {
+        window.viewerApp = initInternetOptimizedViewer();
+        console.log('✅ Internet-Optimized-Viewer erfolgreich initialisiert');
+      } catch (error) {
+        console.error('❌ Fehler beim Initialisieren:', error);
+        document.getElementById('status').textContent = 'Initialisierung fehlgeschlagen: ' + error.message;
+      }
+    });
+    
+    window.addEventListener('beforeunload', () => {
+      if (window.viewerApp && window.viewerApp.destroy) {
+        window.viewerApp.destroy();
+      }
+    });
+  </script>
+</body>
+</html>
