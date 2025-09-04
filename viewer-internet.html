@@ -269,8 +269,8 @@
   <!-- PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
   
-  <!-- Internet Optimized Viewer -->
-  <script type="module">
+  <!-- Internet Optimized Viewer - Inline für bessere Kompatibilität -->
+  <script>
     // Warte bis alle Bibliotheken geladen sind
     function waitForLibraries() {
       return new Promise((resolve) => {
@@ -279,18 +279,173 @@
             console.log('✅ Alle Bibliotheken geladen');
             resolve();
           } else {
-            console.log('⏳ Warte auf Bibliotheken...');
-            setTimeout(checkLibraries, 100);
+            console.log('⏳ Warte auf Bibliotheken... QRCode:', typeof QRCode, 'Peer:', typeof Peer);
+            setTimeout(checkLibraries, 200);
           }
         };
         checkLibraries();
       });
     }
     
-    import { initInternetOptimizedViewer } from './viewer-internet.js';
+    // Viewer-Logik direkt hier einbetten
+    function initInternetOptimizedViewer() {
+      console.log('🌐 Internet-Optimized Viewer wird initialisiert');
+      const remoteVideo = document.getElementById('remote');
+      const statusEl = document.getElementById('status');
+      const pidEl = document.getElementById('pid');
+      const linkEl = document.getElementById('link');
+      const btnStartStream = document.getElementById('btnStartStream');
+      const startScreen = document.getElementById('startScreen');
+      const qrSection = document.getElementById('qrSection');
+
+      let currentPeer = null;
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 3;
+      let isStreamActive = false;
+      let connectionTimeout = null;
+
+      // AGGRESSIVE Internet-Konfiguration
+      function createInternetOptimizedPeer() {
+        console.log('🔧 Erstelle Peer mit Internet-Optimierung');
+        
+        const peer = new Peer({
+          config: {
+            'iceServers': [
+              { urls: 'stun:stun.l.google.com:19302' },
+              {
+                urls: [
+                  'turn:openrelay.metered.ca:80',
+                  'turn:openrelay.metered.ca:443',
+                  'turn:openrelay.metered.ca:443?transport=tcp'
+                ],
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+              },
+              {
+                urls: [
+                  'turn:relay1.expressturn.com:3478',
+                  'turn:relay1.expressturn.com:3478?transport=tcp'
+                ],
+                username: 'efSCKZqnZbF2RfHZ68',
+                credential: 'web@anyfirewall.com'
+              }
+            ],
+            'iceCandidatePoolSize': 30,
+            'bundlePolicy': 'max-bundle',
+            'rtcpMuxPolicy': 'require',
+            'iceTransportPolicy': 'relay', // Forciere TURN
+            'enableDtlsSrtp': true
+          }
+        });
+        return peer;
+      }
+
+      // Button Event
+      btnStartStream?.addEventListener('click', () => {
+        console.log('🚀 Internet-Stream aktiviert');
+        
+        if (startScreen) startScreen.style.display = 'none';
+        if (qrSection) qrSection.style.display = 'block';
+        
+        statusEl.textContent = 'Status: TURN-Server werden kontaktiert...';
+        isStreamActive = true;
+        
+        createPeerConnection();
+      });
+
+      function createPeerConnection() {
+        if (!isStreamActive) return;
+
+        if (currentPeer) currentPeer.destroy();
+        currentPeer = createInternetOptimizedPeer();
+        
+        currentPeer.on('open', (id) => {
+          console.log('✅ Internet-Peer verbunden:', id);
+          pidEl.textContent = id;
+          statusEl.textContent = 'Status: Bereit für Internet-Stream (TURN-Server aktiv)';
+          generateQRCodeAndLink(id);
+          reconnectAttempts = 0;
+        });
+
+        currentPeer.on('call', (call) => {
+          console.log('📞 Internet-Call empfangen');
+          statusEl.textContent = 'Status: Internet-Stream wird über TURN aufgebaut...';
+          
+          call.answer();
+          
+          call.on('stream', (remoteStream) => {
+            console.log('📺 Internet-Stream empfangen!');
+            statusEl.textContent = 'Status: Internet-Stream läuft! ✅';
+            remoteVideo.srcObject = remoteStream;
+            remoteVideo.play().catch(console.error);
+          });
+
+          call.on('close', () => {
+            console.log('📴 Internet-Call beendet');
+            statusEl.textContent = 'Status: Stream beendet';
+            remoteVideo.srcObject = null;
+          });
+
+          call.on('error', (err) => {
+            console.error('❌ Call-Fehler:', err);
+            statusEl.textContent = 'Stream-Fehler: ' + err.message;
+          });
+        });
+
+        currentPeer.on('error', (err) => {
+          console.error('❌ Peer-Fehler:', err);
+          statusEl.textContent = 'Peer-Fehler: ' + err.message;
+          
+          if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            setTimeout(() => {
+              statusEl.textContent = `Reconnect ${reconnectAttempts}/${maxReconnectAttempts}...`;
+              createPeerConnection();
+            }, 2000);
+          }
+        });
+      }
+
+      function generateQRCodeAndLink(peerId) {
+        const baseUrl = window.location.origin + window.location.pathname.replace('/viewer-internet.html', '');
+        const streamerUrl = `${baseUrl}/streamer.html?id=${peerId}`;
+        
+        console.log('🔗 Link generiert:', streamerUrl);
+        linkEl.textContent = streamerUrl;
+        linkEl.href = streamerUrl;
+        
+        // QR-Code mit Retry
+        const qrCodeContainer = document.getElementById('qrcode');
+        if (qrCodeContainer) {
+          const generateQR = () => {
+            if (typeof QRCode !== 'undefined') {
+              qrCodeContainer.innerHTML = '';
+              new QRCode(qrCodeContainer, {
+                text: streamerUrl,
+                width: 256,
+                height: 256,
+                correctLevel: QRCode.CorrectLevel.H
+              });
+              console.log('✅ QR-Code generiert');
+            } else {
+              setTimeout(generateQR, 500);
+            }
+          };
+          generateQR();
+        }
+      }
+
+      return {
+        destroy: () => {
+          isStreamActive = false;
+          if (currentPeer) currentPeer.destroy();
+        }
+      };
+    }
     
+    // Initialisierung
     document.addEventListener('DOMContentLoaded', async () => {
-      console.log('🌐 Internet-Optimized-Viewer wird geladen...');
+      console.log('🌐 Internet-Viewer wird geladen...');
       
       if (!navigator.mediaDevices || !window.RTCPeerConnection) {
         document.getElementById('status').textContent = 'Fehler: Browser unterstützt WebRTC nicht';
@@ -298,19 +453,17 @@
       }
       
       try {
-        // Warte auf Bibliotheken
         await waitForLibraries();
-        
         window.viewerApp = initInternetOptimizedViewer();
-        console.log('✅ Internet-Optimized-Viewer erfolgreich initialisiert');
+        console.log('✅ Internet-Viewer bereit');
       } catch (error) {
-        console.error('❌ Fehler beim Initialisieren:', error);
-        document.getElementById('status').textContent = 'Initialisierung fehlgeschlagen: ' + error.message;
+        console.error('❌ Initialisierung fehlgeschlagen:', error);
+        document.getElementById('status').textContent = 'Fehler: ' + error.message;
       }
     });
     
     window.addEventListener('beforeunload', () => {
-      if (window.viewerApp && window.viewerApp.destroy) {
+      if (window.viewerApp?.destroy) {
         window.viewerApp.destroy();
       }
     });
