@@ -291,17 +291,36 @@ export function initInternetOptimizedViewer() {
     linkEl.textContent = streamerUrl;
     linkEl.href = streamerUrl;
     
+    // QR-Code mit Retry-Mechanismus
     const qrCodeContainer = document.getElementById('qrcode');
-    if (qrCodeContainer && typeof QRCode !== 'undefined') {
-      qrCodeContainer.innerHTML = '';
-      new QRCode(qrCodeContainer, {
-        text: streamerUrl,
-        width: 256,
-        height: 256,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
-      });
+    if (qrCodeContainer) {
+      qrCodeContainer.innerHTML = 'QR-Code wird geladen...';
+      
+      // Warte bis QRCode Bibliothek verfügbar ist
+      const generateQR = () => {
+        if (typeof QRCode !== 'undefined') {
+          qrCodeContainer.innerHTML = '';
+          try {
+            new QRCode(qrCodeContainer, {
+              text: streamerUrl,
+              width: 256,
+              height: 256,
+              colorDark: '#000000',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.H
+            });
+            console.log('✅ QR-Code erfolgreich generiert');
+          } catch (err) {
+            console.error('❌ QR-Code Fehler:', err);
+            qrCodeContainer.innerHTML = '<p>QR-Code konnte nicht generiert werden</p>';
+          }
+        } else {
+          console.log('⏳ Warte auf QRCode Bibliothek...');
+          setTimeout(generateQR, 500); // Retry nach 500ms
+        }
+      };
+      
+      generateQR();
     }
   }
 

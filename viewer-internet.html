@@ -271,9 +271,25 @@
   
   <!-- Internet Optimized Viewer -->
   <script type="module">
+    // Warte bis alle Bibliotheken geladen sind
+    function waitForLibraries() {
+      return new Promise((resolve) => {
+        const checkLibraries = () => {
+          if (typeof QRCode !== 'undefined' && typeof Peer !== 'undefined') {
+            console.log('✅ Alle Bibliotheken geladen');
+            resolve();
+          } else {
+            console.log('⏳ Warte auf Bibliotheken...');
+            setTimeout(checkLibraries, 100);
+          }
+        };
+        checkLibraries();
+      });
+    }
+    
     import { initInternetOptimizedViewer } from './viewer-internet.js';
     
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       console.log('🌐 Internet-Optimized-Viewer wird geladen...');
       
       if (!navigator.mediaDevices || !window.RTCPeerConnection) {
@@ -282,6 +298,9 @@
       }
       
       try {
+        // Warte auf Bibliotheken
+        await waitForLibraries();
+        
         window.viewerApp = initInternetOptimizedViewer();
         console.log('✅ Internet-Optimized-Viewer erfolgreich initialisiert');
       } catch (error) {
