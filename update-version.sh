@@ -21,7 +21,14 @@ fi
 echo "🔄 Version Update: $CURRENT_VERSION → $NEW_VERSION"
 
 # Version in beiden HTML-Dateien aktualisieren
-sed -i '' "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$NEW_VERSION/g" index.html
-sed -i '' "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$NEW_VERSION/g" streamer.html
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS Version - verwende Perl für bessere RegEx-Kompatibilität
+    perl -i -pe "s/v\d+\.\d+\.\d+/v$NEW_VERSION/g" index.html
+    perl -i -pe "s/v\d+\.\d+\.\d+/v$NEW_VERSION/g" streamer.html
+else
+    # Linux Version
+    sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$NEW_VERSION/g" index.html
+    sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$NEW_VERSION/g" streamer.html
+fi
 
 echo "✅ Versionsnummer auf v$NEW_VERSION aktualisiert"
