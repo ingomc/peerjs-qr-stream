@@ -32,6 +32,24 @@
     <div class="card">
       <h3>Lokale Kamera</h3>
       <video id="local" playsinline autoplay muted></video>
+      
+      <!-- Qualitätsstufen-Auswahl -->
+      <div style="margin:12px 0;">
+        <label for="qualitySelect" style="font-size:14px;font-weight:600;margin-bottom:8px;display:block">
+          🌐 Stream-Qualität (für Internet-Verbindungen):
+        </label>
+        <select id="qualitySelect" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;background:white">
+          <option value="ultra-low">📱 Ultra Low (320x240@15fps) - Sicher für alle TURN-Server</option>
+          <option value="low">📺 Low (640x480@20fps) - Funktioniert meist über Internet</option>
+          <option value="medium" selected>🎥 Medium (1280x720@25fps) - Gute Balance</option>
+          <option value="high">🔥 High (1920x1080@30fps) - Nur für starke Verbindungen</option>
+        </select>
+        <div style="font-size:11px;color:#666;margin-top:4px;line-height:1.3">
+          💡 <strong>Tipp:</strong> Beginnen Sie mit "Ultra Low" wenn die Verbindung nicht funktioniert.
+          Für WLAN können Sie "High" verwenden.
+        </div>
+      </div>
+      
       <p id="status">Status: bereit</p>
       <button id="btnStart">Starten & verbinden</button>
     </div>
@@ -44,34 +62,11 @@
 
   <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
   <script type="module">
-    import { initStreamerApp } from './streamer.js';
-    import { initSimpleStreamerApp } from './streamer-simple.js';
+    import { initStreamerApp } from './streamer-quality.js';
 
     window.addEventListener('load', () => {
-      // Warte bis Browser im Leerlauf ist für optimale Performance
-      if (window.requestIdleCallback) {
-        requestIdleCallback(() => {
-          // Prüfe URL-Parameter für Simple Mode
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get('simple') === '1') {
-            console.log('Simple Mode aktiviert');
-            initSimpleStreamerApp();
-          } else {
-            initStreamerApp();
-          }
-        });
-      } else {
-        // Fallback für ältere Browser
-        setTimeout(() => {
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get('simple') === '1') {
-            console.log('Simple Mode aktiviert');
-            initSimpleStreamerApp();
-          } else {
-            initStreamerApp();
-          }
-        }, 100);
-      }
+      console.log('🎯 Quality-Streamer wird geladen...');
+      initStreamerApp();
     });
   </script>
 </body>
