@@ -30,12 +30,24 @@
     </div>
 
     <div class="card">
-      <h3>QR für Streamer</h3>
-      <div id="qr"></div>
-      <p>Oder Link kopieren:<br>
-        <span class="mono" id="link"></span>
-      </p>
-      <p class="mono">Viewer‑ID: <span id="pid">(wird generiert)</span></p>
+      <h3>🎯 Stream starten</h3>
+      <div id="startScreen" style="text-align:center;padding:40px 20px">
+        <h4>📱 Bereit für Streaming</h4>
+        <p>Klicken Sie auf den Button um den QR-Code zu generieren.<br>
+           <small>(Benötigt für Autoplay-Unterstützung)</small></p>
+        <button id="btnStartStream" style="font-size:18px;padding:15px 25px;background:#4CAF50;color:white;border:none">
+          🚀 Stream aktivieren & QR-Code anzeigen
+        </button>
+      </div>
+      
+      <div id="qrSection" style="display:none">
+        <h3>QR für Streamer</h3>
+        <div id="qr"></div>
+        <p>Oder Link kopieren:<br>
+          <span class="mono" id="link"></span>
+        </p>
+        <p class="mono">Viewer‑ID: <span id="pid">(wird generiert)</span></p>
+      </div>
     </div>
   </div>
 

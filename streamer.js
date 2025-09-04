@@ -4,6 +4,7 @@ export function initStreamerApp() {
   const localVideo = document.getElementById('local');
   const cameraSelect = document.getElementById('cameraSelect');
   const btnRefreshCameras = document.getElementById('btnRefreshCameras');
+  const cameraStatus = document.getElementById('cameraStatus');
   const viewerId = new URL(location.href).searchParams.get('id');
   document.getElementById('viewer').textContent = viewerId || '(fehlt)';
 
@@ -15,39 +16,126 @@ export function initStreamerApp() {
 
   // 📹 KAMERA-AUSWAHL FUNKTIONEN
   async function loadAvailableCameras() {
+    cameraStatus.textContent = '🧪 Teste Kamera-Kompatibilität...';
+    cameraStatus.style.color = '#666';
+    
     try {
+      // Erst temporären Stream für Kamera-Erkennung starten
+      const tempStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' }, 
+        audio: false 
+      });
+      tempStream.getTracks().forEach(track => track.stop());
+      
       const devices = await navigator.mediaDevices.enumerateDevices();
       availableCameras = devices.filter(device => device.kind === 'videoinput');
       
       console.log(`📱 ${availableCameras.length} Kameras gefunden:`, availableCameras);
+      cameraStatus.textContent = `🔍 ${availableCameras.length} Kameras gefunden, teste Kompatibilität...`;
       
       // Dropdown befüllen
       cameraSelect.innerHTML = '';
       
       if (availableCameras.length === 0) {
         cameraSelect.innerHTML = '<option value="">❌ Keine Kameras gefunden</option>';
+        cameraStatus.textContent = '❌ Keine Kameras gefunden';
+        cameraStatus.style.color = 'red';
         return;
       }
       
       // Standard-Option hinzufügen
       cameraSelect.innerHTML = '<option value="auto">🤖 Automatisch (Rückkamera bevorzugt)</option>';
       
-      // Alle verfügbaren Kameras hinzufügen
-      availableCameras.forEach((camera, index) => {
-        const label = camera.label || `Kamera ${index + 1}`;
-        const icon = label.toLowerCase().includes('front') || label.toLowerCase().includes('user') ? '🤳' : 
-                    label.toLowerCase().includes('back') || label.toLowerCase().includes('environment') ? '📷' : '📹';
+      // KAMERA-KOMPATIBILITÄT TESTEN 🧪
+      const workingCameras = [];
+      const failedCameras = [];
+      
+      for (let i = 0; i < availableCameras.length; i++) {
+        const camera = availableCameras[i];
+        const label = camera.label || `Kamera ${i + 1}`;
         
+        cameraStatus.textContent = `🧪 Teste ${i + 1}/${availableCameras.length}: ${label}`;
+        
+        try {
+          console.log(`🧪 Teste Kamera: ${label} (${camera.deviceId.substring(0, 8)}...)`);
+          
+          // Mini-Test: Kamera kurz aktivieren
+          const testStream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+              deviceId: { exact: camera.deviceId },
+              width: { ideal: 720, max: 720, min: 480 },     // 720p Maximum!
+              height: { ideal: 1280, max: 1280, min: 640 }   // Hochkant 9:16
+            },
+            audio: false
+          });
+          
+          // Test erfolgreich - Kamera funktioniert!
+          const videoTrack = testStream.getVideoTracks()[0];
+          const settings = videoTrack.getSettings();
+          testStream.getTracks().forEach(track => track.stop());
+          
+          console.log(`✅ Kamera funktioniert: ${settings.width}x${settings.height}`);
+          
+          const icon = label.toLowerCase().includes('front') || label.toLowerCase().includes('user') ? '🤳' : 
+                      label.toLowerCase().includes('back') || label.toLowerCase().includes('environment') ? '📷' : '📹';
+          
+          // Qualitäts-Bewertung für 720p-Limit angepasst
+          let qualityBadge = '';
+          const totalPixels = settings.width * settings.height;
+          if (totalPixels >= 720*1280) qualityBadge = ' 🏆'; // 720p Hochkant - MAXIMUM!
+          else if (totalPixels >= 540*960) qualityBadge = ' ⭐'; // 540p Hochkant
+          else if (totalPixels >= 360*640) qualityBadge = ' ✅'; // 360p Hochkant
+          else qualityBadge = ' ⚠️'; // Sehr niedrig
+          
+          workingCameras.push({
+            deviceId: camera.deviceId,
+            label: label,
+            icon: icon,
+            resolution: `${settings.width}x${settings.height}`,
+            qualityBadge: qualityBadge,
+            pixels: totalPixels
+          });
+          
+        } catch (testErr) {
+          console.warn(`❌ Kamera nicht funktionsfähig: ${label} (${testErr.message})`);
+          failedCameras.push({ label, error: testErr.message });
+        }
+      }
+      
+      console.log(`✅ ${workingCameras.length} von ${availableCameras.length} Kameras sind funktionsfähig`);
+      
+      // Nach Qualität sortieren (höchste Auflösung zuerst)
+      workingCameras.sort((a, b) => b.pixels - a.pixels);
+      
+      // Nur funktionierende Kameras hinzufügen
+      workingCameras.forEach((camera) => {
         const option = document.createElement('option');
         option.value = camera.deviceId;
-        option.textContent = `${icon} ${label}`;
+        option.textContent = `${camera.icon} ${camera.label} (${camera.resolution})${camera.qualityBadge}`;
         cameraSelect.appendChild(option);
       });
       
-      console.log('✅ Kamera-Dropdown aktualisiert');
+      // Status-Update
+      if (workingCameras.length === 0) {
+        cameraSelect.innerHTML += '<option value="">⚠️ Keine funktionsfähigen Kameras gefunden</option>';
+        cameraStatus.textContent = '❌ Alle Kameras fehlgeschlagen - verwende Automatik';
+        cameraStatus.style.color = 'red';
+      } else {
+        cameraStatus.textContent = `✅ ${workingCameras.length} funktionsfähige Kameras gefunden`;
+        cameraStatus.style.color = 'green';
+        
+        if (failedCameras.length > 0) {
+          cameraStatus.textContent += ` (${failedCameras.length} übersprungen)`;
+          cameraStatus.style.color = '#ff8800';  // Orange
+        }
+      }
+      
+      console.log('✅ Kamera-Dropdown mit getesteten Kameras aktualisiert');
     } catch (err) {
       console.error('❌ Fehler beim Laden der Kameras:', err);
       cameraSelect.innerHTML = '<option value="">❌ Fehler beim Laden der Kameras</option>';
+      cameraStatus.textContent = `❌ Fehler: ${err.message}`;
+      cameraStatus.style.color = 'red';
     }
   }
 
@@ -69,64 +157,125 @@ export function initStreamerApp() {
 
   async function getCam() {
     try {
-      // Kamera-spezifische Einstellungen
+      // � OPTIMIERT für 720p Hochkant-Beamer mit Orientierungs-Erhaltung
       const videoConstraints = {
-        width: { ideal: 608, min: 540 },  // 9:16 Breite für 1080p
-        height: { ideal: 1080, min: 960 }, // Volle Beamer-Höhe
-        frameRate: { ideal: 30, min: 24 }, // Flüssige 30fps
-        // Hochkant-optimierte Einstellungen
+        width: { ideal: 720, max: 720, min: 540 },      // 720p MAXIMUM - mehr geht nicht!
+        height: { ideal: 1280, max: 1280, min: 960 },   // Hochkant 9:16 Format
+        frameRate: { ideal: 30, max: 30, min: 24 },     // Stabile 30fps
+        // WICHTIG: Orientierung beibehalten
         advanced: [
-          { width: { min: 540, ideal: 608 } },    // 9:16 Verhältnis
-          { height: { min: 960, ideal: 1080 } },  // Full-HD Höhe
-          { frameRate: { min: 24, ideal: 30 } },
-          { aspectRatio: { ideal: 0.5625 } }      // 9:16 = 0.5625
-        ]
+          { width: { min: 540, ideal: 720, max: 720 } },       // 720p Breite MAX
+          { height: { min: 960, ideal: 1280, max: 1280 } },    // Hochkant Höhe MAX  
+          { frameRate: { min: 24, ideal: 30, max: 30 } },
+          { aspectRatio: { ideal: 0.5625 } }                   // 9:16 = 0.5625
+        ],
+        // Orientierung NICHT umdrehen!
+        facingMode: selectedCameraId ? undefined : { ideal: 'environment' }
       };
 
       // Kamera-ID hinzufügen wenn spezifische Kamera ausgewählt
       if (selectedCameraId) {
         videoConstraints.deviceId = { exact: selectedCameraId };
-        console.log('📷 Verwende spezifische Kamera:', selectedCameraId);
+        delete videoConstraints.facingMode; // Keine facingMode-Konflikte
+        console.log('📷 Verwende spezifische Kamera mit 720p MAXIMUM:', selectedCameraId);
       } else {
-        // Automatisch: Rückkamera bevorzugen
-        videoConstraints.facingMode = { ideal: 'environment' };
-        console.log('🤖 Automatische Kamera-Auswahl (Rückkamera bevorzugt)');
+        console.log('🤖 Automatische Kamera-Auswahl mit 720p MAXIMUM (Rückkamera bevorzugt)');
       }
 
-      // OPTIMIERT für Hochkant-Beamer (9:16 Format, 1080p Höhe)
+      // 🎯 720p Hochkant-Beamer OPTIMIERT
       localStream = await navigator.mediaDevices.getUserMedia({ 
         video: videoConstraints, 
         audio: { 
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 48000, // Gute Audio-Qualität
-          channelCount: 2
+          sampleRate: 48000,  // Hi-Fi Audio
+          sampleSize: 16,     // 16-bit Audio
+          channelCount: 2     // Stereo
         }
       });
-      console.log('✅ Kamera mit BEAMER-optimierter Qualität aktiviert (9:16)');
-      console.log('📹 Video Settings (BEAMER-FORMAT):', localStream.getVideoTracks()[0].getSettings());
-      console.log('🔊 Audio Settings:', localStream.getAudioTracks()[0].getSettings());
+      console.log('� Kamera mit 720p MAXIMUM HOCHKANT-Qualität aktiviert!');
+      console.log('📹 Video Settings (720p HOCHKANT):', localStream.getVideoTracks()[0].getSettings());
+      console.log('🔊 Audio Settings (HI-FI):', localStream.getAudioTracks()[0].getSettings());
+      
     } catch (err) {
-      console.log('⚠️ Gewählte Kamera nicht verfügbar, versuche Fallback:', err.message);
-      // Fallback: Frontkamera - auch beamer-optimiert
-      localStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 540, min: 480 },   // Reduzierte, aber immer noch 9:16
-          height: { ideal: 960, min: 854 },  // Reduzierte, aber gute Höhe
-          frameRate: { ideal: 30, min: 20 },
-          facingMode: 'user',
+      console.warn('⚠️ 720p Maximum nicht verfügbar, versuche niedrigere Qualität:', err.message);
+      
+      // 🛡️ FALLBACK 1: 540p Hochkant (mittlere Qualität)
+      try {
+        const fallbackConstraints = {
+          width: { ideal: 540, max: 720, min: 480 },
+          height: { ideal: 960, max: 1280, min: 854 },
+          frameRate: { ideal: 30, max: 30, min: 20 },
           advanced: [
-            { aspectRatio: { ideal: 0.5625 } }  // 9:16 auch bei Frontkamera
+            { width: { min: 480, ideal: 540, max: 720 } },
+            { height: { min: 854, ideal: 960, max: 1280 } },
+            { frameRate: { min: 20, ideal: 30, max: 30 } },
+            { aspectRatio: { ideal: 0.5625 } }
           ]
-        }, 
-        audio: { 
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000
+        };
+        
+        if (selectedCameraId) {
+          fallbackConstraints.deviceId = { exact: selectedCameraId };
+        } else {
+          fallbackConstraints.facingMode = { ideal: 'environment' };
         }
-      });
-      console.log('✅ Fallback-Kamera mit Beamer-Format aktiviert (9:16)');
+        
+        console.log('🔄 Fallback 1: 540p Hochkant-Qualität...');
+        localStream = await navigator.mediaDevices.getUserMedia({ 
+          video: fallbackConstraints, 
+          audio: { 
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 48000,
+            channelCount: 2
+          }
+        });
+        console.log('⭐ Fallback 1 erfolgreich - 540p Hochkant-Qualität');
+      } catch (fallback1Err) {
+        console.warn('❌ Fallback 1 fehlgeschlagen:', fallback1Err.message);
+        
+        // 🛡️ FALLBACK 2: Beliebige Qualität, aber Hochkant bevorzugt
+        try {
+          const emergencyConstraints = {
+            width: { ideal: 480, max: 720, min: 320 },
+            height: { ideal: 854, max: 1280, min: 480 },
+            frameRate: { ideal: 30, min: 15 }
+          };
+          
+          if (selectedCameraId) {
+            emergencyConstraints.deviceId = { exact: selectedCameraId };
+            console.log('🔄 Fallback 2: Beliebige Qualität mit gewählter Kamera...');
+          } else {
+            emergencyConstraints.facingMode = 'environment';
+            console.log('🔄 Fallback 2: Beliebige Hochkant-Qualität...');
+          }
+          
+          localStream = await navigator.mediaDevices.getUserMedia({ 
+            video: emergencyConstraints, 
+            audio: { echoCancellation: true, sampleRate: 48000 }
+          });
+          console.log('✅ Fallback 2 erfolgreich - Basis-Qualität erhalten');
+        } catch (fallback2Err) {
+          console.warn('❌ Fallback 2 fehlgeschlagen:', fallback2Err.message);
+          
+          // 🛡️ FALLBACK 3: Absoluter Notfall - beliebige Kamera
+          if (selectedCameraId) {
+            selectedCameraId = null; // Reset für automatische Auswahl
+          }
+          
+          console.log('🔄 Fallback 3: Notfall - beliebige verfügbare Kamera...');
+          localStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              width: { ideal: 720, min: 320 },
+              height: { ideal: 1280, min: 240 },
+              frameRate: { ideal: 30, min: 10 }
+            }, 
+            audio: { echoCancellation: true }
+          });
+          console.log('🆘 Fallback 3 erfolgreich - Notfall-Modus');
+        }
+      }
     }
     
     localVideo.srcObject = localStream;
@@ -251,12 +400,28 @@ export function initStreamerApp() {
                 if (sender.track && sender.track.kind === 'video') {
                   const params = sender.getParameters();
                   
-                  // BEAMER-optimierte Bitrate (5 Mbps für 608x1080 ausreichend)
+                  // 🎯 OPTIMIERTE Bitrate für 720p HOCHKANT (dynamisch basierend auf Auflösung)
                   if (params.encodings && params.encodings.length > 0) {
-                    params.encodings[0].maxBitrate = 5000000; // 5 Mbps - perfekt für 9:16 Format!
-                    params.encodings[0].maxFramerate = 30;
+                    // Berechne optimale Bitrate basierend auf echte 720p-Limits
+                    const videoTrack = localStream.getVideoTracks()[0];
+                    const settings = videoTrack.getSettings();
+                    const pixels = settings.width * settings.height;
                     
-                    console.log('🎯 Video Bitrate auf 5 Mbps gesetzt für BEAMER-Streaming (9:16)!');
+                    let targetBitrate;
+                    if (pixels >= 720*1280) {
+                      targetBitrate = 6000000;  // 6 Mbps für 720p Hochkant (MAXIMUM!)
+                    } else if (pixels >= 540*960) {
+                      targetBitrate = 4500000;  // 4.5 Mbps für 540p Hochkant
+                    } else if (pixels >= 360*640) {
+                      targetBitrate = 3000000;  // 3 Mbps für 360p Hochkant
+                    } else {
+                      targetBitrate = 2000000;  // 2 Mbps für niedrige Auflösung
+                    }
+                    
+                    params.encodings[0].maxBitrate = targetBitrate;
+                    params.encodings[0].maxFramerate = settings.frameRate || 30;
+                    
+                    console.log(`🎯 720p-optimierte Bitrate gesetzt: ${targetBitrate/1000000} Mbps für ${settings.width}x${settings.height} HOCHKANT!`);
                     await sender.setParameters(params);
                   }
                 }
