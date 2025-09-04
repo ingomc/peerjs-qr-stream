@@ -162,25 +162,17 @@ export function initStreamerApp() {
 
   async function getCam() {
     try {
-      // 📱 DEVICE-OPTIMIERTE Constraints (iPhone XS, Galaxy S25U, etc.)
+      // 🎯 NATIVE KAMERA-AUFLÖSUNG verwenden (keine erzwungenen Constraints)
       const videoConstraints = {
-        width: { ideal: 720, max: 1280, min: 540 },      // Flexibel für verschiedene Geräte
-        height: { ideal: 1280, max: 1920, min: 960 },    // S25U kann mehr, iPhone XS weniger
-        frameRate: { ideal: 30, max: 30, min: 24 },      // Hardware-Encoder optimal
-        advanced: [
-          { width: { min: 540, ideal: 720, max: 1280 } },
-          { height: { min: 960, ideal: 1280, max: 1920 } },
-          { frameRate: { min: 24, ideal: 30, max: 30 } },
-          { aspectRatio: { ideal: 0.5625 } }              // 9:16 bevorzugt
-        ]
+        frameRate: { ideal: 30 }  // Nur Framerate optimieren, Rest nativ lassen
       };
 
       if (selectedCameraId) {
         videoConstraints.deviceId = { exact: selectedCameraId };
-        console.log('📷 Verwende spezifische iPhone XS Kamera:', selectedCameraId);
+        console.log('📷 Verwende spezifische Kamera:', selectedCameraId);
       } else {
         videoConstraints.facingMode = { ideal: 'environment' };
-        console.log('🤖 Automatische iPhone XS Kamera (Rückkamera bevorzugt)');
+        console.log('🤖 Automatische Kamera (Rückkamera bevorzugt)');
       }
 
       localStream = await navigator.mediaDevices.getUserMedia({ 
@@ -195,22 +187,21 @@ export function initStreamerApp() {
         }
       });
       
-      console.log(`${device.icon} ${device.type} Kamera aktiviert mit Hardware-Encoding!`);
-      console.log('📹 Video Settings:', localStream.getVideoTracks()[0].getSettings());
+      console.log(`${device.icon} ${device.type} Kamera aktiviert - verwendet native Auflösung!`);
+      console.log('📹 Native Video Settings:', localStream.getVideoTracks()[0].getSettings());
       
     } catch (err) {
       console.warn(`⚠️ ${device.type} Fallback wird verwendet:`, err.message);
       
       try {
+        // 🎯 Auch Fallback ohne erzwungene Auflösung
         localStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
-            width: { ideal: 540, min: 480 },
-            height: { ideal: 960, min: 640 },
-            frameRate: { ideal: 30, min: 20 }
+            frameRate: { ideal: 30 }  // Nur Framerate, keine Auflösungs-Zwang
           }, 
           audio: { echoCancellation: true, sampleRate: 48000 }
         });
-        console.log(`✅ ${device.type} Fallback erfolgreich`);
+        console.log(`✅ ${device.type} Fallback erfolgreich mit nativer Auflösung`);
       } catch (fallbackErr) {
         throw new Error(`${device.type} Kamera nicht verfügbar: ` + fallbackErr.message);
       }
