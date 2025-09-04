@@ -42,7 +42,7 @@ export function initViewerApp() {
   }
 
   function createPeer() {
-    // Zurück zum Standard PeerJS Server mit M1 Mac optimierter Konfiguration
+    // INTERNET-OPTIMIERTE KONFIGURATION mit TURN-Server forciert
     const peer = new Peer({
       config: {
         'iceServers': [
@@ -52,28 +52,41 @@ export function initViewerApp() {
           { urls: 'stun:stun2.l.google.com:19302' },
           // Alternative STUN Server
           { urls: 'stun:stun.relay.metered.ca:80' },
-          // Robuste TURN Server Konfiguration
+          // Robuste TURN Server Konfiguration für Internet
           {
-            urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
-            username: 'openrelayproject',
-            credential: 'openrelayproject'
-          },
-          {
-            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            urls: [
+              'turn:openrelay.metered.ca:80', 
+              'turn:openrelay.metered.ca:443',
+              'turn:openrelay.metered.ca:80?transport=tcp',
+              'turn:openrelay.metered.ca:443?transport=tcp'
+            ],
             username: 'openrelayproject',
             credential: 'openrelayproject'
           },
           // Zusätzliche kostenlose TURN Server
           {
-            urls: 'turn:relay1.expressturn.com:3478',
+            urls: [
+              'turn:relay1.expressturn.com:3478',
+              'turn:relay1.expressturn.com:3478?transport=tcp'
+            ],
             username: 'efSCKZqnZbF2RfHZ68',
             credential: 'web@anyfirewall.com'
+          },
+          // Weitere TURN Server für maximale Internet-Kompatibilität
+          {
+            urls: [
+              'turn:numb.viagenie.ca:3478',
+              'turn:numb.viagenie.ca:3478?transport=tcp'
+            ],
+            username: 'webrtc@live.com',
+            credential: 'muazkh'
           }
         ],
-        'iceCandidatePoolSize': 10,
-        'bundlePolicy': 'balanced',
+        'iceCandidatePoolSize': 30, // Mehr Candidates für Internet
+        'bundlePolicy': 'max-bundle', // Bessere Internet-Kompatibilität
         'rtcpMuxPolicy': 'require',
-        // M1 Mac spezifische Einstellungen
+        // FORCIERE TURN-Server für Internet (auskommentieren für WLAN)
+        'iceTransportPolicy': 'relay', // NUR TURN-Server, kein direktes P2P
         'sdpSemantics': 'unified-plan'
       }
     });
