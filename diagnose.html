@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebRTC Diagnose • PeerJS QR Stream</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;max-width:900px;margin:24px auto;padding:0 12px}
+    .card{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:16px}
+    pre{background:#f3f4f6;padding:12px;border-radius:8px;overflow:auto;font-size:12px}
+    button{padding:10px 14px;border-radius:10px;border:1px solid #aaa;background:#f7f7f7;cursor:pointer}
+    .success{color:#16a34a} .error{color:#dc2626} .warning{color:#d97706}
+  </style>
+</head>
+<body>
+  <h1>🔍 WebRTC Diagnose</h1>
+  
+  <div class="card">
+    <h3>Browser & Gerät</h3>
+    <div id="browser-info"></div>
+  </div>
+
+  <div class="card">
+    <h3>WebRTC Unterstützung</h3>
+    <div id="webrtc-support"></div>
+  </div>
+
+  <div class="card">
+    <h3>Verfügbare Codecs</h3>
+    <div id="codecs"></div>
+  </div>
+
+  <div class="card">
+    <h3>Kamera Test</h3>
+    <button id="test-cam">Kamera testen</button>
+    <video id="test-video" playsinline autoplay muted style="width:100%;max-width:400px;margin-top:12px"></video>
+    <div id="cam-result"></div>
+  </div>
+
+  <div class="card">
+    <h3>STUN/TURN Test</h3>
+    <button id="test-ice">ICE Candidates testen</button>
+    <div id="ice-result"></div>
+  </div>
+
+  <script>
+    // Browser Info
+    document.getElementById('browser-info').innerHTML = `
+      <strong>User Agent:</strong> ${navigator.userAgent}<br>
+      <strong>Platform:</strong> ${navigator.platform}<br>
+      <strong>Language:</strong> ${navigator.language}
+    `;
+
+    // WebRTC Support
+    const hasWebRTC = !!(window.RTCPeerConnection || window.webkitRTCPeerConnection);
+    const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    
+    document.getElementById('webrtc-support').innerHTML = `
+      <div class="${hasWebRTC ? 'success' : 'error'}">RTCPeerConnection: ${hasWebRTC ? '✅' : '❌'}</div>
+      <div class="${hasGetUserMedia ? 'success' : 'error'}">getUserMedia: ${hasGetUserMedia ? '✅' : '❌'}</div>
+    `;
+
+    // Codecs Test
+    async function getCodecs() {
+      try {
+        const pc = new RTCPeerConnection();
+        
+        // Alternative Methode für M1 Macs
+        if (RTCRtpSender.getCapabilities) {
+          const videoCapabilities = RTCRtpSender.getCapabilities('video');
+          const audioCapabilities = RTCRtpSender.getCapabilities('audio');
+          
+          let codecsHTML = '<strong>Video Codecs (Static):</strong><br>';
+          videoCapabilities.codecs.forEach(codec => {
+            codecsHTML += `${codec.mimeType}${codec.clockRate ? ' (' + codec.clockRate + ' Hz)' : ''}<br>`;
+          });
+          
+          codecsHTML += '<br><strong>Audio Codecs (Static):</strong><br>';
+          audioCapabilities.codecs.forEach(codec => {
+            codecsHTML += `${codec.mimeType}${codec.clockRate ? ' (' + codec.clockRate + ' Hz)' : ''}<br>`;
+          });
+          
+          document.getElementById('codecs').innerHTML = codecsHTML;
+          
+        } else {
+          // Fallback für ältere Browser
+          const transceivers = [
+            pc.addTransceiver('video'),
+            pc.addTransceiver('audio')
+          ];
+          
+          await pc.createOffer();
+          const codecs = transceivers.map(t => t.sender.getCapabilities(t.sender.track?.kind || 'video'));
+          
+          let codecsHTML = '';
+          codecs.forEach((capability, i) => {
+            const type = i === 0 ? 'Video' : 'Audio';
+            codecsHTML += `<strong>${type} Codecs:</strong><br>`;
+            capability.codecs.forEach(codec => {
+              codecsHTML += `${codec.mimeType} (${codec.clockRate || 'N/A'} Hz)<br>`;
+            });
+            codecsHTML += '<br>';
+          });
+          
+          document.getElementById('codecs').innerHTML = codecsHTML;
+        }
+        
+        pc.close();
+      } catch (e) {
+        console.error('Codec detection error:', e);
+        document.getElementById('codecs').innerHTML = '<div class="error">Codec-Erkennung fehlgeschlagen: ' + e.message + '</div>';
+      }
+    }
+    getCodecs();
+
+    // Camera Test
+    document.getElementById('test-cam').onclick = async () => {
+      const resultDiv = document.getElementById('cam-result');
+      const video = document.getElementById('test-video');
+      
+      try {
+        resultDiv.innerHTML = 'Teste Kamera...';
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480 },
+          audio: true
+        });
+        
+        video.srcObject = stream;
+        
+        const videoTrack = stream.getVideoTracks()[0];
+        const audioTrack = stream.getAudioTracks()[0];
+        
+        resultDiv.innerHTML = `
+          <div class="success">✅ Kamera funktioniert!</div>
+          <strong>Video:</strong> ${JSON.stringify(videoTrack.getSettings(), null, 2)}<br>
+          <strong>Audio:</strong> ${JSON.stringify(audioTrack.getSettings(), null, 2)}
+        `;
+      } catch (e) {
+        resultDiv.innerHTML = `<div class="error">❌ Kamera-Fehler: ${e.message}</div>`;
+      }
+    };
+
+    // ICE Test
+    document.getElementById('test-ice').onclick = async () => {
+      const resultDiv = document.getElementById('ice-result');
+      resultDiv.innerHTML = 'Teste STUN/TURN Server...';
+      
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }
+        ]
+      });
+      
+      const candidates = [];
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          candidates.push(e.candidate);
+          console.log('ICE Candidate:', e.candidate);
+        } else {
+          // Gathering complete
+          let results = '<strong>ICE Candidates gefunden:</strong><br>';
+          const types = {};
+          candidates.forEach(c => {
+            const type = c.candidate.includes('typ srflx') ? 'STUN (Public IP)' :
+                        c.candidate.includes('typ relay') ? 'TURN (Relay)' :
+                        c.candidate.includes('typ host') ? 'Host (Local IP)' : 'Unknown';
+            types[type] = (types[type] || 0) + 1;
+          });
+          
+          Object.keys(types).forEach(type => {
+            const className = type.includes('STUN') || type.includes('TURN') ? 'success' : 'warning';
+            results += `<div class="${className}">${type}: ${types[type]} candidates</div>`;
+          });
+          
+          if (candidates.length === 0) {
+            results = '<div class="error">❌ Keine ICE Candidates gefunden - Firewall blockiert!</div>';
+          }
+          
+          resultDiv.innerHTML = results;
+        }
+      };
+      
+      pc.createDataChannel('test');
+      await pc.createOffer().then(offer => pc.setLocalDescription(offer));
+    };
+  </script>
+</body>
+</html>

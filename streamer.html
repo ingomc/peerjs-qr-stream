@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Streamer • PeerJS QR Stream</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;max-width:900px;margin:24px auto;padding:0 12px}
+    video{width:100%;background:#000;border-radius:12px}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .card{border:1px solid #e5e7eb;border-radius:12px;padding:16px;flex:1 1 320px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    button{padding:10px 14px;border-radius:10px;border:1px solid #aaa;background:#f7f7f7;cursor:pointer}
+  </style>
+</head>
+<body>
+  <h1>📱 Streamer (iPhone)</h1>
+  <div class="row">
+    <div class="card">
+      <h3>📹 Kamera-Auswahl</h3>
+      <select id="cameraSelect" style="width:100%;padding:8px;margin-bottom:12px;border-radius:6px">
+        <option value="">📡 Verfügbare Kameras werden geladen...</option>
+      </select>
+      <button id="btnRefreshCameras" style="width:100%;margin-bottom:12px">🔄 Kameras neu laden</button>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="card">
+      <h3>Lokale Kamera</h3>
+      <video id="local" playsinline autoplay muted></video>
+      <p id="status">Status: bereit</p>
+      <button id="btnStart">Starten & verbinden</button>
+    </div>
+    <div class="card">
+      <h3>Ziel‑Viewer</h3>
+      <p class="mono">Viewer‑ID: <span id="viewer">(aus URL)</span></p>
+      <p>Diese Seite wurde idealerweise per QR‑Code mit der ID geöffnet.</p>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <script type="module">
+    import { initStreamerApp } from './streamer.js';
+    import { initSimpleStreamerApp } from './streamer-simple.js';
+
+    window.addEventListener('load', () => {
+      // Warte bis Browser im Leerlauf ist für optimale Performance
+      if (window.requestIdleCallback) {
+        requestIdleCallback(() => {
+          // Prüfe URL-Parameter für Simple Mode
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('simple') === '1') {
+            console.log('Simple Mode aktiviert');
+            initSimpleStreamerApp();
+          } else {
+            initStreamerApp();
+          }
+        });
+      } else {
+        // Fallback für ältere Browser
+        setTimeout(() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('simple') === '1') {
+            console.log('Simple Mode aktiviert');
+            initSimpleStreamerApp();
+          } else {
+            initStreamerApp();
+          }
+        }, 100);
+      }
+    });
+  </script>
+</body>
+</html>

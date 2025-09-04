@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Viewer • PeerJS QR Stream</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;max-width:980px;margin:24px auto;padding:0 12px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    @media (max-width:800px){.grid{grid-template-columns:1fr}}
+    video{width:100%;background:#000;border-radius:12px}
+    #qr{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #ccc;border-radius:12px}
+    .card{border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+    code, .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    button{padding:10px 14px;border-radius:10px;border:1px solid #aaa;background:#f7f7f7;cursor:pointer}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📺 Viewer (Mac/Beamer)</h1>
+    <button id="btnFS">Vollbild</button>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Stream</h3>
+      <video id="remote" playsinline autoplay></video>
+      <p id="status">Status: bereit</p>
+    </div>
+
+    <div class="card">
+      <h3>QR für Streamer</h3>
+      <div id="qr"></div>
+      <p>Oder Link kopieren:<br>
+        <span class="mono" id="link"></span>
+      </p>
+      <p class="mono">Viewer‑ID: <span id="pid">(wird generiert)</span></p>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script type="module">
+    import { initViewerApp } from './viewer.js';
+    import { initSimpleViewerApp } from './viewer-simple.js';
+
+    window.addEventListener('load', () => {
+      // Warte bis Browser im Leerlauf ist für optimale Performance
+      if (window.requestIdleCallback) {
+        requestIdleCallback(() => {
+          // Prüfe URL-Parameter für Simple Mode
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('simple') === '1') {
+            console.log('Simple Mode aktiviert');
+            initSimpleViewerApp();
+          } else {
+            initViewerApp();
+          }
+        });
+      } else {
+        // Fallback für ältere Browser
+        setTimeout(() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('simple') === '1') {
+            console.log('Simple Mode aktiviert');
+            initSimpleViewerApp();
+          } else {
+            initViewerApp();
+          }
+        }, 100);
+      }
+    });
+  </script>
+</body>
+</html>
