@@ -94,16 +94,14 @@ export function initStreamerApp() {
       'iceServers': [
         { urls: 'stun:stun.l.google.com:19302' },
         
-        // NEUE zuverlässigere TURN-Server
+        // ExpressTurn TURN Server (zuverlässig für Internet)
         {
           urls: [
-            'turn:a.relay.metered.ca:80',
-            'turn:a.relay.metered.ca:80?transport=tcp',
-            'turn:a.relay.metered.ca:443',
-            'turn:a.relay.metered.ca:443?transport=tcp'
+            'turn:relay1.expressturn.com:3480',
+            'turn:relay1.expressturn.com:3480?transport=tcp'
           ],
-          username: 'a3bf4bbdf23ce58e3f60a3a5',
-          credential: 'zx04k6vJRg8C2CdW'
+          username: '00000000207238510З',
+          credential: 'g44rhlphv1e7sLBeOJAUob8558Q='
         },
         
         // Backup: Twilio TURN
