@@ -68,17 +68,12 @@ export function initViewerApp() {
           // Google's STUN Server (für lokale IP-Erkennung)
           { urls: 'stun:stun.l.google.com:19302' },
           
-          // ExpressTurn TURN Server (zuverlässig für Internet)
-          {
-            urls: [
-              'turn:relay1.expressturn.com:3480',
-              'turn:relay1.expressturn.com:3480?transport=tcp'
-            ],
-            username: '00000000207238510З',
-            credential: 'g44rhlphv1e7sLBeOJAUob8558Q='
-          },
-          
-          // Backup: Twilio STUN/TURN (oft zuverlässiger)
+        // ExpressTurn TURN Server
+        {
+          urls: ['turn:relay1.expressturn.com:3480'],
+          username: '00000000207238510З',
+          credential: 'g44rhlphv1e7sLBeOJAUob8558Q='
+        },          // Backup: Twilio STUN/TURN (oft zuverlässiger)
           {
             urls: [
               'turn:global.turn.twilio.com:3478?transport=udp',

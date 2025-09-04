@@ -94,12 +94,9 @@ export function initStreamerApp() {
       'iceServers': [
         { urls: 'stun:stun.l.google.com:19302' },
         
-        // ExpressTurn TURN Server (zuverlässig für Internet)
+        // ExpressTurn TURN Server
         {
-          urls: [
-            'turn:relay1.expressturn.com:3480',
-            'turn:relay1.expressturn.com:3480?transport=tcp'
-          ],
+          urls: ['turn:relay1.expressturn.com:3480'],
           username: '00000000207238510З',
           credential: 'g44rhlphv1e7sLBeOJAUob8558Q='
         },
