@@ -93,29 +93,43 @@ export function initStreamerApp() {
     const config = {
       'iceServers': [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
+        
+        // NEUE zuverlässigere TURN-Server
+        {
+          urls: [
+            'turn:a.relay.metered.ca:80',
+            'turn:a.relay.metered.ca:80?transport=tcp',
+            'turn:a.relay.metered.ca:443',
+            'turn:a.relay.metered.ca:443?transport=tcp'
+          ],
+          username: 'a3bf4bbdf23ce58e3f60a3a5',
+          credential: 'zx04k6vJRg8C2CdW'
+        },
+        
+        // Backup: Twilio TURN
+        {
+          urls: [
+            'turn:global.turn.twilio.com:3478?transport=udp',
+            'turn:global.turn.twilio.com:3478?transport=tcp',
+            'turn:global.turn.twilio.com:443?transport=tcp'
+          ],
+          username: '94046c49c8b37b8b2b48fc75ba90dd7a3d073bc8d7c6b5f3b9ed3e8b6d8e5f3a',
+          credential: 'GC/wqCr3j3oWVqVhNlLq7T6v8s4='
+        },
+        
+        // Fallback
         {
           urls: [
             'turn:openrelay.metered.ca:80',
-            'turn:openrelay.metered.ca:443',
             'turn:openrelay.metered.ca:443?transport=tcp'
           ],
           username: 'openrelayproject',
           credential: 'openrelayproject'
-        },
-        {
-          urls: [
-            'turn:relay1.expressturn.com:3478',
-            'turn:relay1.expressturn.com:3478?transport=tcp'
-          ],
-          username: 'efSCKZqnZbF2RfHZ68',
-          credential: 'web@anyfirewall.com'
         }
       ],
       'iceCandidatePoolSize': 30,
       'bundlePolicy': 'max-bundle',
       'rtcpMuxPolicy': 'require',
-      // 'iceTransportPolicy': 'relay', // FORCIERE TURN-Server
       
       // TESTE: Erlaube auch direkte Verbindungen für Internet
       'iceTransportPolicy': 'all', // Versuche alle Verbindungsarten
