@@ -9,7 +9,30 @@
     header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
     @media (max-width:800px){.grid{grid-template-columns:1fr}}
-    video{width:100%;background:#000;border-radius:12px}
+    
+    /* 📱 NATÜRLICHE VIDEO-DARSTELLUNG (behält Original-Seitenverhältnis) */
+    video{
+      background:#000;
+      border-radius:12px;
+      object-fit:contain; /* KRITISCH: Original-Verhältnis beibehalten */
+      display:block;
+      margin:0 auto; /* Zentriert das Video */
+      /* KEINE festen Größen - wird dynamisch per JavaScript gesetzt */
+    }
+    
+    /* 🎯 Video-Container für alle Formate flexibel */
+    .video-container{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:300px;
+      max-height:85vh; /* Verhindert Overflow bei sehr hohen Videos */
+      background:#000;
+      border-radius:12px;
+      position:relative;
+      overflow:hidden; /* Verhindert Scroll-Balken */
+    }
+    
     #qr{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #ccc;border-radius:12px}
     .card{border:1px solid #e5e7eb;border-radius:12px;padding:16px}
     code, .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
@@ -25,7 +48,9 @@
   <div class="grid">
     <div class="card">
       <h3>Stream</h3>
-      <video id="remote" playsinline autoplay></video>
+      <div class="video-container">
+        <video id="remote" playsinline autoplay></video>
+      </div>
       <p id="status">Status: bereit</p>
     </div>
 

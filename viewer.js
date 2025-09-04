@@ -168,9 +168,61 @@ export function initViewerApp() {
         remoteVideo.srcObject = stream;
         statusEl.textContent = 'Status: verbunden ✅';
         
-        // Erweiterte Video-Element-Überwachung
+        // 📱 ORIGINAL-SEITENVERHÄLTNIS beibehalten (1:1 wie Kamera)
         remoteVideo.onloadedmetadata = () => {
-          console.log('📺 Video metadata geladen:', remoteVideo.videoWidth + 'x' + remoteVideo.videoHeight);
+          const videoWidth = remoteVideo.videoWidth;
+          const videoHeight = remoteVideo.videoHeight;
+          const aspectRatio = videoWidth / videoHeight;
+          
+          console.log('📺 Video metadata geladen:', videoWidth + 'x' + videoHeight);
+          console.log('📐 Original Aspect Ratio:', aspectRatio.toFixed(3));
+          
+          // WICHTIG: Video-Element auf ORIGINAL-Abmessungen setzen
+          // Entferne alle vorherigen Styling-Overrides
+          remoteVideo.style.width = '';
+          remoteVideo.style.height = '';
+          remoteVideo.style.maxWidth = '';
+          remoteVideo.style.maxHeight = '';
+          
+          // Setze ECHTE Dimensionen basierend auf Original-Stream
+          if (aspectRatio < 1) {
+            // HOCHKANT (z.B. 720x1280) - zeige GENAU so an
+            console.log('📱 HOCHKANT-Stream erkannt:', videoWidth + 'x' + videoHeight);
+            remoteVideo.style.width = 'auto';
+            remoteVideo.style.height = '80vh'; // Höhe begrenzen für Bildschirm
+            remoteVideo.style.maxHeight = '80vh';
+            
+            console.log('✅ Hochkant-Video mit Original-Seitenverhältnis angezeigt');
+          } else if (aspectRatio > 1.5) {
+            // BREITBILD (z.B. 1280x720) - zeige GENAU so an  
+            console.log('📺 BREITBILD-Stream erkannt:', videoWidth + 'x' + videoHeight);
+            remoteVideo.style.width = '100%';
+            remoteVideo.style.height = 'auto';
+            remoteVideo.style.maxWidth = '100%';
+            
+            console.log('✅ Breitbild-Video mit Original-Seitenverhältnis angezeigt');
+          } else {
+            // QUADRATISCH oder LEICHT RECHTECKIG (z.B. 640x480, 800x600)
+            console.log('⬜ QUADRAT/LEICHT-RECHTECKIG Stream erkannt:', videoWidth + 'x' + videoHeight);
+            remoteVideo.style.width = 'auto';
+            remoteVideo.style.height = '70vh';
+            remoteVideo.style.maxHeight = '70vh';
+            
+            console.log('✅ Quadrat-Video mit Original-Seitenverhältnis angezeigt');
+          }
+          
+          // UNIVERSAL: Immer Original-Verhältnis beibehalten
+          remoteVideo.style.objectFit = 'contain'; // KRITISCH: Verhältnis nicht verzerren
+          remoteVideo.style.display = 'block';
+          remoteVideo.style.margin = '0 auto';
+          
+          // Container flexibel machen für alle Formate
+          const videoContainer = remoteVideo.parentElement;
+          videoContainer.style.display = 'flex';
+          videoContainer.style.justifyContent = 'center';
+          videoContainer.style.alignItems = 'center';
+          
+          console.log(`🎯 Video wird mit ORIGINAL-Seitenverhältnis ${aspectRatio.toFixed(3)} angezeigt`);
           console.log('📺 Video duration:', remoteVideo.duration);
         };
       });
