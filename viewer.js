@@ -290,6 +290,11 @@ export function initViewerApp() {
         statusEl.textContent = 'Status: verbunden ✅';
         debugLog('✅ Stream erfolgreich dem Video-Element zugewiesen');
         
+        // Starte WebRTC Stats Monitoring für Empfänger
+        if (call.peerConnection) {
+          startViewerStatsMonitoring(call.peerConnection);
+        }
+        
         // 📱 ORIGINAL-SEITENVERHÄLTNIS beibehalten (1:1 wie Kamera)
         remoteVideo.onloadedmetadata = () => {
           const videoWidth = remoteVideo.videoWidth;
@@ -425,4 +430,52 @@ export function initViewerApp() {
       remoteVideo.webkitRequestFullscreen();
     }
   });
+  
+  // WebRTC Stats Monitoring für Viewer (Empfänger)
+  let viewerStatsInterval = null;
+  
+  function startViewerStatsMonitoring(peerConnection) {
+    debugLog('📊 Starte Viewer Stats Monitoring...');
+    
+    viewerStatsInterval = setInterval(async () => {
+      try {
+        const stats = await peerConnection.getStats();
+        let videoStats = null;
+        
+        stats.forEach(report => {
+          if (report.type === 'inbound-rtp' && report.kind === 'video') {
+            videoStats = report;
+          }
+        });
+        
+        if (videoStats) {
+          debugLog('═══ VIEWER WEBRTC VIDEO STATS ═══');
+          debugLog(`📥 Bytes received: ${(videoStats.bytesReceived / 1024 / 1024).toFixed(2)} MB`);
+          debugLog(`📦 Packets received: ${videoStats.packetsReceived}`);
+          debugLog(`🎞️ Frames received: ${videoStats.framesReceived}`);
+          debugLog(`📏 Frame width: ${videoStats.frameWidth}x${videoStats.frameHeight}`);
+          debugLog(`🔧 Decoder: ${videoStats.decoderImplementation || 'unknown'}`);
+          debugLog(`📺 Video Element: ${remoteVideo.videoWidth}x${remoteVideo.videoHeight}`);
+          
+          if (videoStats.packetsLost) {
+            debugLog(`⚠️ Packets Lost: ${videoStats.packetsLost}`, 'warn');
+          }
+          
+          if (videoStats.jitter) {
+            debugLog(`📊 Jitter: ${(videoStats.jitter * 1000).toFixed(2)}ms`);
+          }
+        }
+      } catch (err) {
+        debugLog(`❌ Stats Error: ${err.message}`, 'error');
+      }
+    }, 3000); // Alle 3 Sekunden
+  }
+  
+  function stopViewerStatsMonitoring() {
+    if (viewerStatsInterval) {
+      clearInterval(viewerStatsInterval);
+      viewerStatsInterval = null;
+      debugLog('📊 Viewer Stats Monitoring gestoppt');
+    }
+  }
 }

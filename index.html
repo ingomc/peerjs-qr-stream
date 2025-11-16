@@ -81,31 +81,17 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script type="module">
     import { initViewerApp } from './viewer.js';
-    import { initSimpleViewerApp } from './viewer-simple.js';
 
     window.addEventListener('load', () => {
       // Warte bis Browser im Leerlauf ist für optimale Performance
       if (window.requestIdleCallback) {
         requestIdleCallback(() => {
-          // Prüfe URL-Parameter für Simple Mode
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get('simple') === '1') {
-            console.log('Simple Mode aktiviert');
-            initSimpleViewerApp();
-          } else {
-            initViewerApp();
-          }
+          initViewerApp();
         });
       } else {
         // Fallback für ältere Browser
         setTimeout(() => {
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get('simple') === '1') {
-            console.log('Simple Mode aktiviert');
-            initSimpleViewerApp();
-          } else {
-            initViewerApp();
-          }
+          initViewerApp();
         }, 100);
       }
     });
