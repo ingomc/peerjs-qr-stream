@@ -269,7 +269,6 @@ export function initViewerApp() {
       call.on('stream', stream => {
         debugLog('🎥 Stream vom Handy erhalten!');
         debugLog(`📹 Video tracks: ${stream.getVideoTracks().length}`);
-        debugLog(`🔊 Audio tracks: ${stream.getAudioTracks().length}`);
         
         // Stream-Details loggen
         stream.getVideoTracks().forEach((track, i) => {
@@ -277,13 +276,6 @@ export function initViewerApp() {
           debugLog(`📹 Video Track ${i}: ${settings.width || 'auto'}x${settings.height || 'auto'}@${settings.frameRate || 'auto'}fps`);
           debugLog(`📹 Video Track ${i} State: ${track.readyState}`);
           debugLog(`📹 Video Track ${i} Settings: ${JSON.stringify(settings)}`);
-        });
-        
-        stream.getAudioTracks().forEach((track, i) => {
-          const settings = track.getSettings();
-          debugLog(`🔊 Audio Track ${i}: ${settings.sampleRate || 'auto'}Hz, ${settings.channelCount || 'auto'} channels`);
-          debugLog(`🔊 Audio Track ${i} State: ${track.readyState}`);
-          debugLog(`🔊 Audio Track ${i} Settings: ${JSON.stringify(settings)}`);
         });
         
         remoteVideo.srcObject = stream;

@@ -47,12 +47,7 @@ export class StreamManager {
           deviceId: { exact: cameraId },
           ...videoConstraints
         },
-        audio: { 
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000
-        }
+        audio: false // KEIN AUDIO
       });
       
       this.video.srcObject = this.stream;
@@ -74,7 +69,7 @@ export class StreamManager {
           height: videoConstraints.height.ideal,
           frameRate: videoConstraints.frameRate.ideal
         },
-        audio: { echoCancellation: true }
+        audio: false // KEIN AUDIO
       });
       
       this.video.srcObject = this.stream;

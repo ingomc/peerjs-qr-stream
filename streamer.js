@@ -104,12 +104,6 @@ export function initStreamer() {
       debugLog(`📹 Aspect Ratio: ${(settings.width/settings.height).toFixed(2)}`);
       debugLog(`📹 Device: ${settings.deviceId?.substring(0, 20)}...`);
       
-      const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack) {
-        const audioSettings = audioTrack.getSettings();
-        debugLog(`🔊 Audio: ${audioSettings.sampleRate}Hz, ${audioSettings.channelCount} channels`);
-      }
-      
       document.getElementById('status').textContent = 'Status: Verbinde mit Viewer...';
       
       // Mit Viewer verbinden
